@@ -1,7 +1,7 @@
 package models
 
 type Event struct {
-	ID          int
+	EventID     int
 	Title       string
 	Description string
 	StartTime   string
