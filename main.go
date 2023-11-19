@@ -1,5 +1,7 @@
 package main
 
+import "github.com/maycolacerda/ticketfair/routes.go"
+
 func main() {
-	println("Hello World")
+	routes.Handler()
 }

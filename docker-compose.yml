@@ -1,0 +1,19 @@
+version: "3"
+services:
+  mysql:
+    image: mysql
+    ports:
+      - "5432:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: "controle-frota" 
+    volumes:
+      - .\migration\docker-database-init.sql:/docker-entrypoint-initdb.d/docker-database-init.sql
+    restart: always
+    security_opt:
+      - seccomp:unconfined
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
