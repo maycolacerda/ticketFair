@@ -7,4 +7,5 @@ type Event struct {
 	StartTime   string `json:"start_time"`
 	EndTime     string `json:"end_time"`
 	Location    string `json:"location"`
+	CompanyID   int    `json:"company_id"`
 }

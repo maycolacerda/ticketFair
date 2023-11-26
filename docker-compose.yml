@@ -6,7 +6,7 @@ services:
       - "5432:3306"
     environment:
       MYSQL_ROOT_PASSWORD: "root"
-      MYSQL_DATABASE: "controle-frota" 
+      MYSQL_DATABASE: "ticketfair" 
     volumes:
       - .\migration\docker-database-init.sql:/docker-entrypoint-initdb.d/docker-database-init.sql
     restart: always
@@ -16,4 +16,4 @@ services:
     image: adminer
     restart: always
     ports:
-      - 8080:8080
+      - 8000:8000
