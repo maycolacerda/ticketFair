@@ -5,17 +5,26 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/maycolacerda/ticketfair/controllers"
+	"github.com/maycolacerda/ticketfair/services"
 )
 
-func Handler() {
+func HandlerFunc() {
 
 	r := gin.Default()
 
-	r.GET("/", controllers.HelloWorld)
-	r.GET("/index", controllers.HelloWorld)
-	r.GET("/tickets", controllers.GetTickets)
-	r.GET("/users", controllers.GetUsers)
-	r.GET("/user/:user_id", controllers.GetUser)
+	protected := r.Group("/protected")
+	{
+
+		protected.GET("/tickets", controllers.GetTickets)
+		protected.GET("/users", controllers.GetUsers)
+		protected.GET("/user/:user_id", controllers.GetUser)
+	}
+	open := r.Group("/open")
+	{
+		open.GET("/", controllers.HelloWorld)
+		open.GET("/index", controllers.HelloWorld)
+		open.POST("/login", services.LoginHandler)
+	}
 
 	http.ListenAndServe("localhost:8080", r)
 }

@@ -14,6 +14,7 @@ var (
 	err error
 )
 
+// The Connect function establishes a connection to a MySQL database and performs automatic migration.
 func Connect() {
 	db, erro := sql.Open("mysql", "root:root@tcp(localhost:5432)/ticketfair?parseTime=true")
 	if erro != nil {
@@ -33,6 +34,8 @@ func Connect() {
 	Automigrate()
 }
 
+// The `Automigrate` function is used to automatically migrate database tables for the `User`,
+// `Ticket`, `Event`, `TicketGroup`, and `UserProfile` models.
 func Automigrate() {
 	DB.AutoMigrate(&models.User{}, &models.Ticket{}, &models.Event{}, &models.TicketGroup{}, &models.UserProfile{})
 }
