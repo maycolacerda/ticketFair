@@ -1,0 +1,20 @@
+# docker-compose.yml
+version: '3.8' # Versão da especificação Docker Compose
+
+services:
+  ticketfair-app: # Nome do serviço para sua aplicação TicketFair
+    build: .      # Instrução para construir a imagem a partir do Dockerfile no diretório atual
+    ports:
+      - "8000:8000" # Mapeia a porta 8000 do host para a porta 8000 do container
+    networks:
+      - ticketfair-network # Conecta o serviço à rede definida abaixo    
+    restart: always # Reinicia o container automaticamente em caso de falha ou reinicialização do Docker
+    healthcheck: # Configuração de healthcheck para o serviço ticketfair-app
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"] # Comando para verificar a saúde da aplicação
+      interval: 30s # Frequência da verificação (a cada 30 segundos)
+      timeout: 10s # Tempo limite para o comando de healthcheck (10 segundos)
+      retries: 3 # Número de tentativas antes de considerar o serviço não saudável
+
+networks:
+  ticketfair-network:
+    driver: bridge
