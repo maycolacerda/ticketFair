@@ -1,9 +1,9 @@
 package main
 
-import (
-	"github.com/maycolacerda/ticketfair/routes.go"
-)
+import "github.com/maycolacerda/ticketfair/routes"
 
 func main() {
-	routes.HandlerFunc()
+
+	// Initialize the routes
+	routes.HandleRequests()
 }
