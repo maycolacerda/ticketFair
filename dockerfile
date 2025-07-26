@@ -9,8 +9,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-#instala o curl para o health check
-RUN apk add --no-cache curl
+
 # Copia o restante dos arquivos do projeto para o diretório de trabalho
 COPY . .
 
@@ -25,8 +24,12 @@ WORKDIR /app
 # Copia o executável compilado do estágio 'builder'
 COPY --from=builder /app/ticketfair .
 
+#instala o curl para o health check
+RUN apk add --no-cache curl
+
 # expoe a porta 8000 para acesso externo
 EXPOSE 8000
 
 # Define o comando padrão a ser executado quando o container iniciar
-CMD ["./ticketfair"]
+CMD ["swag init"]
+ENTRYPOINT ["./ticketfair"]
