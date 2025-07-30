@@ -29,7 +29,7 @@ func GetHome(c *gin.Context) {
 //	@Success		200	{object}	map[string]interface{}
 //	@Router			/health [get]
 func HealthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "Tá saudável"})
+	c.JSON(http.StatusOK, gin.H{"Server Status": "Ok"})
 }
 
 // NotFound godoc

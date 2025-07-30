@@ -1,6 +1,4 @@
 # docker-compose.yml
-version: '3.8' # Versão da especificação Docker Compose
-
 services:
   ticketfair-app: # Nome do serviço para sua aplicação TicketFair
     build: .      # Instrução para construir a imagem a partir do Dockerfile no diretório atual
@@ -14,7 +12,33 @@ services:
       interval: 30s # Frequência da verificação (a cada 30 segundos)
       timeout: 10s # Tempo limite para o comando de healthcheck (10 segundos)
       retries: 3 # Número de tentativas antes de considerar o serviço não saudável
-
+    environment:
+      APP_PORT: 8000
+      DB_HOST: ticketfair-db # Nome do serviço do banco de dados no docker-compose
+      DB_PORT: 3306     # Porta padrão do MySQL
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: ticketfair_db # Nome do banco de dados para o TicketFair
+    depends_on:
+      - ticketfair-db # Garante que o MySQL inicie antes do TicketFair
+  ticketfair-db: # Nome do serviço para o banco de dados MySQL
+    image: mysql:8.0 # Imagem oficial do MySQL (ou outra versão que preferir)
+    environment:
+      MYSQL_DATABASE: ticketfair_db # Nome do banco de dados que será criado
+      MYSQL_USER: user             # Usuário para a aplicação
+      MYSQL_PASSWORD: password     # Senha para o usuário
+      MYSQL_ROOT_PASSWORD: root_password # Senha para o usuário root 
+    volumes:
+      - db-data:/var/lib/mysql # Persiste os dados do MySQL para não perder
+    networks:
+      - ticketfair-network # Conecta o serviço à mesma rede
 networks:
   ticketfair-network:
     driver: bridge
+volumes:
+  db-data:
+    driver: local # Volume para persistência de dados do MySQL
+    driver_opts:
+      type: none
+      device: /var/lib/mysql # Substitua pelo caminho local onde deseja armazenar os dados
+      o: bind # Monta o volume como um diretório existente no host
