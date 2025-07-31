@@ -16,6 +16,10 @@ func HandleRequests() {
 
 	r.GET("/health", controllers.HealthCheck)
 
+	r.POST("/users/new", controllers.NewUser)
+	r.GET("/users", controllers.GetUsers)
+	r.GET("/users/:id", controllers.GetUserByID)
+
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.Run(":8000") // Listen and serve on localhost:8000
 }

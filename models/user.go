@@ -3,15 +3,16 @@ package models
 import (
 	"regexp"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type User struct {
-	gorm.Model
+	UserID   string `json:"user_id" gorm:"primaryKey;uniqueIndex"`
 	Email    string `json:"email" gorm:"uniqueIndex;not null"`
 	Password string `json:"password" gorm:"not null"`
 	Username string `json:"username" gorm:"uniqueIndex"`
-	UserID   string `json:"user_id" gorm:"uniqueIndex"` // Unique identifier for the user
+	// Unique identifier for the user
 }
 
 var (
@@ -25,6 +26,13 @@ var (
 	// Pelo menos 8 caracteres no total
 	hasMinLength = regexp.MustCompile(`.{8,}`)
 )
+
+func (User *User) BeforeCreate(tx *gorm.DB) (err error) {
+
+	User.UserID = uuid.New().String()
+	return nil
+
+}
 
 func (User *User) Validate() []string {
 	var errors []string
@@ -42,9 +50,6 @@ func (User *User) Validate() []string {
 	}
 	if User.Username == "" {
 		errors = append(errors, "Username is required;")
-	}
-	if User.UserID == "" {
-		errors = append(errors, "UserID is required;")
 	}
 
 	return errors
