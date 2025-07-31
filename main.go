@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/maycolacerda/ticketfair/db"
+	"github.com/maycolacerda/ticketfair/database"
 	"github.com/maycolacerda/ticketfair/routes"
 	_ "github.com/swaggo/files"
 	_ "github.com/swaggo/gin-swagger"
@@ -29,6 +29,6 @@ import (
 func main() {
 
 	// Initialize the routes
-	db.InitDB()
+	database.InitDB()
 	routes.HandleRequests()
 }

@@ -1,7 +1,8 @@
-package db
+package database
 
 import (
 	"log"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/maycolacerda/ticketfair/models"
@@ -16,7 +17,12 @@ var (
 
 func InitDB() {
 
-	dsn := "user:password@tcp(localhost:3306)/ticketfair_db?charset=utf8mb4&parseTime=True&loc=Local"
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	dsn := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
 	DB, err = gorm.Open(mysql.New(mysql.Config{
 		DSN: dsn,
 	}), &gorm.Config{

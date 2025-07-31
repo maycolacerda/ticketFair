@@ -30,6 +30,7 @@ services:
       MYSQL_ROOT_PASSWORD: root_password # Senha para o usuário root 
     volumes:
       - db-data:/var/lib/mysql # Persiste os dados do MySQL para não perder
+      - ./migration/docker-database-init.sql:/docker-entrypoint-initdb.d/init.sql # Executa o script de inicialização do banco de dados
     networks:
       - ticketfair-network # Conecta o serviço à mesma rede
 networks:
