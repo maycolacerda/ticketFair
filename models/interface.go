@@ -27,6 +27,8 @@ type ValidationsInterface interface {
 	Validate() []string
 }
 
+// user validations
+
 func (User *User) BeforeCreate(tx *gorm.DB) (err error) {
 
 	User.UserID = uuid.New().String()
@@ -67,4 +69,24 @@ func validadePasswordComplexity(password string) bool {
 		hasLowerCase.MatchString(password) &&
 		hasSymbol.MatchString(password) &&
 		hasMinLength.MatchString(password)
+}
+
+// Login request validations
+
+func (LoginRequest *LoginRequest) Validate() []string {
+	var errors []string
+	if LoginRequest.Email == "" {
+		errors = append(errors, "Email is required")
+	}
+	if !regexp.MustCompile(emailRegex).MatchString(LoginRequest.Email) {
+		errors = append(errors, "Invalid email format")
+	}
+	if LoginRequest.Password == "" {
+		errors = append(errors, "Password is required")
+	}
+	if len(LoginRequest.Password) < 8 {
+		errors = append(errors, "Password must be at least 8 characters long")
+	}
+
+	return errors
 }
