@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -29,7 +30,10 @@ var (
 
 func (User *User) BeforeCreate(tx *gorm.DB) (err error) {
 
-	User.UserID = uuid.New().String()
+	User.UserID = uuid.New().String()                                                           // Generate a new UUID for the user
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(User.Password), bcrypt.DefaultCost) // Hash the password using bcrypt
+	User.Password = string(hashedPassword)                                                      // Store the hashed password in the User struct
+
 	return nil
 
 }

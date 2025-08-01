@@ -31,9 +31,11 @@ func NewUser(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err})
 		return
 	} else {
-		database.DB.Create(&user)
-		c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
-
+		if err := database.DB.Create(&user).Error; err != nil {
+			c.JSON(500, gin.H{"error": "Failed to create user"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "User created successfully", "user_id": user.UserID})
 	}
 }
 
