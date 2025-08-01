@@ -2,8 +2,8 @@
 CREATE TABLE IF NOT EXISTS users (
     `user_id` VARCHAR(36) PRIMARY KEY,
     `email` VARCHAR(100) NOT NULL UNIQUE,
-    `password` VARCHAR(100) NOT NULL,
+    `password` VARCHAR(64) NOT NULL,
     `username` VARCHAR(100) NOT NULL UNIQUE,
     `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
