@@ -14,9 +14,9 @@ How to test the code:
 - [x] create the basics for swagger
 
 ### User
-    - [x] Create table (email, username and password)
-    - [x] Validate password complexity
-    - [x] Create tests
+  - [x] Create table (email, username and password)
+  - [x] Validate password complexity
+  - [x] Create tests
 - Login/user authentication
-    - [ ] implement JWT
-    - [ ] create tests   
+  - [ ] implement JWT
+  - [ ] create tests   
