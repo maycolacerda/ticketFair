@@ -20,3 +20,4 @@ How to test the code:
 - Login/user authentication
   - [ ] implement JWT
   - [ ] create tests   
+- [ ] insert more itens on the to do list
