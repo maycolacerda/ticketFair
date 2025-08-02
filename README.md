@@ -6,4 +6,4 @@ How to test the code:
     ```
       docker compose up
   - check de Swagger UI for the endpoint
-    [http://localhost:8000/swagger/]
+    [http://localhost:8000/swagger/](http://localhost:8000/swagger/)
