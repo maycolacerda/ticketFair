@@ -35,7 +35,6 @@ func TestGetHome(t *testing.T) {
 }
 
 func TestHealthCheck(t *testing.T) {
-
 	r := setupTestRouter()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/health", nil)
@@ -43,5 +42,20 @@ func TestHealthCheck(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status code 200, got %d", w.Code)
+	}
+}
+
+func TestNotFound(t *testing.T) {
+	mockResponse := `{"error":"Página não encontrada"}`
+	r := setupTestRouter()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/some/random/route", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status code 404, got %d", w.Code)
+	}
+	if w.Body.String() != mockResponse {
+		t.Errorf("Expected response body %q, got %q", mockResponse, w.Body.String())
 	}
 }
