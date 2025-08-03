@@ -20,6 +20,8 @@ var (
 	hasSymbol = regexp.MustCompile(`[!@#$%&*]`)
 	// Pelo menos 8 caracteres no total
 	hasMinLength = regexp.MustCompile(`.{8,}`)
+	// Verifica se username possui algum caractere especial
+	hasInvalidCharacter = regexp.MustCompile(`^[a-zA-Z0-9]*$`)
 )
 
 type ValidationsInterface interface {
@@ -44,6 +46,12 @@ func (User *User) BeforeCreate(tx *gorm.DB) (err error) {
 
 func (User *User) Validate() []string {
 	var errors []string
+	if User.Username == "" {
+		errors = append(errors, "Username is required")
+	}
+	if !regexp.MustCompile(hasInvalidCharacter.String()).MatchString(User.Username) {
+		errors = append(errors, "Username must not contain only letters and numbers")
+	}
 	if !regexp.MustCompile(emailRegex).MatchString(User.Email) {
 		errors = append(errors, "Invalid email format")
 	}
@@ -55,9 +63,6 @@ func (User *User) Validate() []string {
 	}
 	if !validadePasswordComplexity(User.Password) {
 		errors = append(errors, "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
-	}
-	if User.Username == "" {
-		errors = append(errors, "Username is required")
 	}
 
 	return errors
