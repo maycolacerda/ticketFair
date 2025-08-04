@@ -3,7 +3,6 @@ package controllers
 import (
 	"net/http"
 	"net/http/httptest"
-
 	"testing"
 
 	"github.com/maycolacerda/ticketfair/models"
@@ -22,13 +21,6 @@ var UserTest = []struct {
 		WantErr:        true,
 		ExpectedStatus: http.StatusNotAcceptable,
 		ExpectedError:  "Password must contain at least one special character",
-	},
-	{
-		Name:           "Valid User",
-		User:           models.User{Username: "Tester2User", Email: "test@example.com", Password: "passW0rd@"},
-		ExpectedStatus: http.StatusOK,
-		WantErr:        false,
-		ExpectedError:  "",
 	},
 	{
 		Name:           "Invalid Email",

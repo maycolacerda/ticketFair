@@ -4,7 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/maycolacerda/ticketfair/controllers"
 	_ "github.com/maycolacerda/ticketfair/docs" // Import the generated
-	swaggerFiles "github.com/swaggo/files"      // swagger embed files
+	"github.com/maycolacerda/ticketfair/middlewares"
+	"github.com/maycolacerda/ticketfair/services"
+	swaggerFiles "github.com/swaggo/files" // swagger embed files
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
@@ -14,11 +16,17 @@ func HandleRequests() {
 	r.GET("/", controllers.GetHome)
 	r.NoRoute(controllers.NotFound)
 
-	r.GET("/health", controllers.HealthCheck)
+	public := r.Group("/public")
+	private := r.Group("/private")
 
-	r.POST("/users/new", controllers.NewUser)
-	r.GET("/users", controllers.GetUsers)
-	r.GET("/users/:id", controllers.GetUserByID)
+	//public
+	public.GET("/health", controllers.HealthCheck)
+	public.POST("/register", controllers.NewUser)
+	public.POST("/auth/login", services.NewAuthRequest)
+	//private
+	private.Use(middlewares.AuthMiddleware())
+	private.GET("/users", controllers.GetUsers)
+	private.GET("/users/:id", controllers.GetUserByID)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.Run(":8000") // Listen and serve on localhost:8000
