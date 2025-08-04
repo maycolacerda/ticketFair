@@ -1,0 +1,8 @@
+DB_HOST="localhost"
+DB_PORT="3306"
+DB_USER="user"
+DB_PASSWORD="password"
+DB_NAME="ticketfair_db"
+TOKEN_HOUR_LIFESPAN="24"
+JWT_SECRET="SecretKey123"
+API_SECRET="ApiSecretKey123"

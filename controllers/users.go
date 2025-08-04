@@ -22,12 +22,12 @@ import (
 func NewUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
 		return
 	}
 	err := user.Validate()
 	if len(err) > 0 {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user data", "details": err})
 		return
 	} else {
 		if err := database.DB.Create(&user).Error; err != nil {
