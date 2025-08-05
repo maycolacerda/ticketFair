@@ -18,7 +18,7 @@ import (
 //	@Param			user	body	models.User	true	"User data"
 //	@Success		200	{object}	map[string]string
 //	@Failure		400	{object}	map[string]string
-//	@Router			/users/new [post]
+//	@Router			/public/newuser [post]
 func NewUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -46,7 +46,7 @@ func NewUser(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{array}		models.User
-//	@Router			/users [get]
+//	@Router			/private/users [get]
 func GetUsers(c *gin.Context) {
 	var users []models.User
 	database.DB.Find(&users)
@@ -63,7 +63,7 @@ func GetUsers(c *gin.Context) {
 //	@Param			id	path	string	true	"User ID"
 //	@Success		200	{object}	models.User
 //	@Failure		404	{object}	map[string]string
-//	@Router			/users/{id} [get]
+//	@Router			/private/users/{id} [get]
 func GetUserByID(c *gin.Context) {
 	userID := c.Param("id")
 	var user models.User

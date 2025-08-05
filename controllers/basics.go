@@ -14,7 +14,7 @@ import (
 //	@Accept			*/*
 //	@Produce		json
 //	@Success		200	{object}	map[string]string
-//	@Router			/ [get]
+//	@Router			/public/ [get]
 func GetHome(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Welcome to the Ticket Fair API!"})
 }
@@ -27,7 +27,7 @@ func GetHome(c *gin.Context) {
 //	@Accept			*/*
 //	@Produce		json
 //	@Success		200	{object}	map[string]interface{}
-//	@Router			/health [get]
+//	@Router			/public/health [get]
 func HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"Server Status": "Ok"})
 }

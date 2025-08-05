@@ -23,10 +23,13 @@ func HandleRequests() {
 	public.GET("/health", controllers.HealthCheck)
 	public.POST("/register", controllers.NewUser)
 	public.POST("/auth/login", services.NewAuthRequest)
+	public.POST("/newuser", controllers.NewUser)
+
 	//private
 	private.Use(middlewares.AuthMiddleware())
 	private.GET("/users", controllers.GetUsers)
-	private.GET("/users/:id", controllers.GetUserByID)
+	private.GET("/users/:id", controllers.GetUserByID) //temporário. Retirar depois
+	private.GET("/users/me", services.CurrentUser)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.Run(":8000") // Listen and serve on localhost:8000

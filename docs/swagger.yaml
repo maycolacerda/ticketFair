@@ -39,7 +39,95 @@ info:
   title: Swagger Example API
   version: "1.0"
 paths:
-  /:
+  /not-found:
+    get:
+      consumes:
+      - '*/*'
+      description: Returns a 404 error for not found routes.
+      produces:
+      - application/json
+      responses:
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Handle not found routes.
+      tags:
+      - NotFound
+  /private/users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all users.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+      summary: Get all users.
+      tags:
+      - Users
+  /private/users/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a user by their ID.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a user by ID.
+      tags:
+      - Users
+  /private/users/me:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the details of the currently authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get the currently authenticated user.
+      tags:
+      - Auth
+  /public/:
     get:
       consumes:
       - '*/*'
@@ -56,7 +144,7 @@ paths:
       summary: Show the home page.
       tags:
       - Home
-  /auth/login:
+  /public/auth/login:
     post:
       consumes:
       - application/json
@@ -92,7 +180,7 @@ paths:
       summary: Authenticate a user.
       tags:
       - Auth
-  /health:
+  /public/health:
     get:
       consumes:
       - '*/*'
@@ -108,68 +196,7 @@ paths:
       summary: Show the status of the server.
       tags:
       - Health
-  /not-found:
-    get:
-      consumes:
-      - '*/*'
-      description: Returns a 404 error for not found routes.
-      produces:
-      - application/json
-      responses:
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Handle not found routes.
-      tags:
-      - NotFound
-  /users:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve a list of all users.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.User'
-            type: array
-      summary: Get all users.
-      tags:
-      - Users
-  /users/{id}:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve a user by their ID.
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.User'
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get a user by ID.
-      tags:
-      - Users
-  /users/new:
+  /public/newuser:
     post:
       consumes:
       - application/json
