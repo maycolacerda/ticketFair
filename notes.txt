@@ -1,0 +1,8 @@
+
+user
+{
+  "email": "mayco.dev@bol.com",
+  "password": "Passw0rd!@",
+  "user_id": "6aa58a3d-1596-4369-a0cf-4ca35c049bc0",
+  "username": "testtesttesrerrr"
+}

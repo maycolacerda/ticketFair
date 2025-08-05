@@ -20,7 +20,7 @@ import (
 //	@Success		200	{object}	map[string]string
 //	@Failure		400	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
-//	@Router			/auth/login [post]
+//	@Router			/public/auth/login [post]
 func NewAuthRequest(c *gin.Context) {
 	var LoginRequest models.LoginRequest
 	var user models.User
@@ -63,7 +63,7 @@ func NewAuthRequest(c *gin.Context) {
 //	@Success		200	{object}	models.User
 //	@Failure		401	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
-//	@Router			/auth/me [get]
+//	@Router			/private/users/me [get]
 func CurrentUser(c *gin.Context) {
 	userID, err := ExtractTokenID(c)
 	if err != nil {
