@@ -41,12 +41,12 @@ func NewAuthRequest(c *gin.Context) {
 			return
 		}
 
-		token, err := GenerateToken(user.UserID)
+		token, err := GenerateToken(c, user.UserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 			return
 		}
-		c.Header("Authorization", token)
+		c.Header("Authorization", "Bearer "+token)
 		c.JSON(http.StatusOK, gin.H{"message": "Login successful", "user_id": user.UserID})
 
 	}
