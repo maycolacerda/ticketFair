@@ -28,8 +28,8 @@ func HandleRequests() {
 	//private
 	private.Use(middlewares.AuthMiddleware())
 	private.GET("/users", controllers.GetUsers)
-	private.GET("/users/:id", controllers.GetUserByID) //temporário. Retirar depois
-	private.GET("/users/me", services.CurrentUser)
+	//private.GET("/users/:id", controllers.GetUserByID) //temporário. Retirar depois
+	private.GET("/users/me", services.CurrentUser) // Get current user
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.Run(":8000") // Listen and serve on localhost:8000

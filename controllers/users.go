@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/maycolacerda/ticketfair/database"
 	"github.com/maycolacerda/ticketfair/models"
+	"github.com/maycolacerda/ticketfair/services"
 )
 
 // NewUser godoc
@@ -63,9 +64,13 @@ func GetUsers(c *gin.Context) {
 //	@Param			id	path	string	true	"User ID"
 //	@Success		200	{object}	models.User
 //	@Failure		404	{object}	map[string]string
-//	@Router			/private/users/{id} [get]
+//	@Router			/private/users/me [get]
 func GetUserByID(c *gin.Context) {
-	userID := c.Param("id")
+	userID, err := services.ExtractTokenID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 	var user models.User
 	if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
