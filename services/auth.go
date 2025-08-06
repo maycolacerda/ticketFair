@@ -46,7 +46,7 @@ func NewAuthRequest(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 			return
 		}
-		c.Header("Authorization", "Bearer "+token)
+		c.Header("Authorization", token)
 		c.JSON(http.StatusOK, gin.H{"message": "Login successful", "user_id": user.UserID})
 
 	}
@@ -70,8 +70,9 @@ func CurrentUser(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+
 	var user models.User
-	if err := database.DB.First(&user, userID).Error; err != nil {
+	if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
