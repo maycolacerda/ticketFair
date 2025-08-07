@@ -78,3 +78,29 @@ func GetUserByID(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, user)
 }
+
+// CurrentUser godoc
+//
+//	@Summary		Get the currently authenticated user.
+//	@Description	Retrieve the details of the currently authenticated user.
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.User
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Router			/private/users/me [get]
+func CurrentUser(c *gin.Context) {
+	userID, err := services.ExtractTokenID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var user models.User
+	if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+	c.JSON(http.StatusOK, user)
+}

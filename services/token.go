@@ -42,7 +42,11 @@ func ValidateToken(c *gin.Context) error {
 
 func ExtractToken(c *gin.Context) string {
 
-	return c.Request.Header.Get("Authorization")
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		return ""
+	}
+	return token[len("Bearer "):] // Remove "Bearer " prefix
 
 }
 

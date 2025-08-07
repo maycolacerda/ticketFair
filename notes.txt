@@ -6,3 +6,63 @@ user
   "user_id": "978382eb-73f5-444b-aef0-6f5044d1730c",
   "username": "testtesttesrerrr"
 }
+{
+    "email": "joao.silva@gmail.com",
+    "password": "J0@0s!lv@",
+    "user_id": "",
+    "username": "joaosilva"
+  },
+  {
+    "email": "maria.souza@hotmail.com",
+    "password": "M@r!@S0uz@#",
+    "user_id": "",
+    "username": "mariasouza"
+  },
+  {
+    "email": "pedro.almeida@yahoo.com",
+    "password": "P3dr0_@lm3id@",
+    "user_id": "",
+    "username": "pedroalmeida"
+  },
+  {
+    "email": "ana.costa@outlook.com",
+    "password": "AnaC0st@!",
+    "user_id": "",
+    "username": "anacosta"
+  },
+  {
+    "email": "luis.fernandes@uol.com.br",
+    "password": "L!u1sF3rn@nd3s",
+    "user_id": "",
+    "username": "luisfernandes"
+  },
+  {
+    "email": "carla.rodrigues@bol.com.br",
+    "password": "C@rl@R0dr!gu3s",
+    "user_id": "",
+    "username": "carlarodrigues"
+  },
+  {
+    "email": "daniel.santos@terra.com.br",
+    "password": "D@n13l_s@nt0s$",
+    "user_id": "",
+    "username": "danielsantos"
+  },
+  {
+    "email": "patricia.pereira@gmail.com",
+    "password": "P@tr!c!aP3r3ir@",
+    "user_id": "",
+    "username": "patriciapereira"
+  },
+  {
+    "email": "rafael.oliveira@hotmail.com",
+    "password": "R@f@3l0l!v3ir@",
+    "user_id": "",
+    "username": "rafaeloliveira"
+  },
+  {
+    "email": "julia.gomes@outlook.com",
+    "password": "Juli@G0m3s!",
+    "user_id": "",
+    "username": "juliagomes"
+  }
