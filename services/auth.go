@@ -52,3 +52,8 @@ func NewAuthRequest(c *gin.Context) {
 	}
 
 }
+
+func Logout(c *gin.Context) {
+	c.Header("Authorization", "")
+	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
+}

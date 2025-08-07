@@ -22,6 +22,10 @@ var (
 	hasMinLength = regexp.MustCompile(`.{8,}`)
 	// Verifica se username possui algum caractere especial
 	hasInvalidCharacter = regexp.MustCompile(`^[a-zA-Z0-9]*$`)
+	// Verifica se a string possui apenas números
+	hasonlynumbers = regexp.MustCompile(`^[0-9]*$`)
+	// Verifica se a string possui apenas letras
+	hasonlyletters = regexp.MustCompile(`^[a-zA-Z\s]*$`)
 )
 
 type ValidationsInterface interface {
@@ -91,6 +95,33 @@ func (LoginRequest *LoginRequest) Validate() []string {
 	}
 	if len(LoginRequest.Password) < 8 {
 		errors = append(errors, "Password must be at least 8 characters long")
+	}
+
+	return errors
+}
+
+func (Profile *Profile) Validate() []string {
+	var errors []string
+	if Profile.FirstName == "" {
+		errors = append(errors, "First name is required")
+	}
+	if !regexp.MustCompile(hasonlyletters.String()).MatchString(Profile.FirstName) {
+		errors = append(errors, "First name must contain only letters")
+	}
+	if Profile.LastName == "" {
+		errors = append(errors, "Last name is required")
+	}
+	if !regexp.MustCompile(hasonlyletters.String()).MatchString(Profile.LastName) {
+		errors = append(errors, "Last name must contain only letters")
+	}
+	if Profile.PhoneNumber == "" {
+		errors = append(errors, "Phone number is required")
+	}
+	if !regexp.MustCompile(hasonlynumbers.String()).MatchString(Profile.PhoneNumber) {
+		errors = append(errors, "Phone number must contain only numbers")
+	}
+	if Profile.Address == "" {
+		errors = append(errors, "Address is required")
 	}
 
 	return errors
