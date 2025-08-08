@@ -51,7 +51,7 @@ func CreateProfile(c *gin.Context) {
 //	@Failure		400	{object}	map[string]string
 //	@Router			/private/profile/update [post]
 func UpdateProfile(c *gin.Context) {
-	profileID, _ := services.ExtractTokenID(c)
+	userID, _ := services.ExtractTokenID(c)
 	var profile models.Profile
 	if err := c.ShouldBindJSON(&profile); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
@@ -63,7 +63,7 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	if err := database.DB.Model(&models.Profile{}).Where("profile_id = ?", profileID).Updates(profile).Error; err != nil {
+	if err := database.DB.Model(&models.Profile{}).Where("user_id = ?", userID).Updates(profile).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
 		return
 	}

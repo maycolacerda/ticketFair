@@ -28,10 +28,11 @@ func HandleRequests() {
 	//private
 	private.Use(middlewares.AuthMiddleware())
 	private.GET("/users", controllers.GetUsers)
-	private.GET("/users/:id", controllers.GetUserByID)      //temporário. Retirar depois
-	private.GET("/users/me", controllers.CurrentUser)       // Get current user
-	private.POST("/profile/new", controllers.CreateProfile) // Create a new profile
-	private.POST("/logout", services.Logout)                // Logout user
+	private.GET("/users/:id", controllers.GetUserByID) //temporário. Retirar depois
+	private.GET("/users/me", controllers.CurrentUser)
+	private.POST("/profile/new", controllers.CreateProfile)
+	private.POST("/profile/update", controllers.UpdateProfile)
+	private.POST("/logout", services.Logout)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.Run(":8000") // Listen and serve on localhost:8000
 }

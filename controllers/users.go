@@ -46,12 +46,13 @@ func NewUser(c *gin.Context) {
 //	@Tags			Profiles
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{array}		models.User
+//	@Success		200	{array}		models.Profile
+//	@Failure		500	{object}	map[string]string
 //	@Router			/private/users [get]
 func GetUsers(c *gin.Context) {
-	var users []models.User
-	database.DB.Find(&users)
-	c.JSON(http.StatusOK, users)
+	var profiles []models.Profile
+	database.DB.Find(&profiles)
+	c.JSON(http.StatusOK, profiles)
 }
 
 // GetUserByID godoc
