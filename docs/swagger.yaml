@@ -11,6 +11,21 @@ definitions:
     - email
     - password
     type: object
+  models.Profile:
+    properties:
+      address:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      phone_number:
+        type: string
+      profile_id:
+        type: string
+      user_id:
+        type: string
+    type: object
   models.User:
     properties:
       email:
@@ -56,6 +71,66 @@ paths:
       summary: Handle not found routes.
       tags:
       - NotFound
+  /private/profile/new:
+    post:
+      consumes:
+      - application/json
+      description: Create a new profile with user ID and other details.
+      parameters:
+      - description: Profile data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/models.Profile'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new profile.
+      tags:
+      - Profiles
+  /private/profile/update:
+    post:
+      consumes:
+      - application/json
+      description: Update an existing profile with new details.
+      parameters:
+      - description: Profile data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/models.Profile'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update an existing profile.
+      tags:
+      - Profiles
   /private/users:
     get:
       consumes:
@@ -72,8 +147,8 @@ paths:
             type: array
       summary: Get all users.
       tags:
-      - Users
-  /private/users/{id}:
+      - Profiles
+  /private/users/:id:
     get:
       consumes:
       - application/json
@@ -99,7 +174,7 @@ paths:
             type: object
       summary: Get a user by ID.
       tags:
-      - Users
+      - Profiles
   /private/users/me:
     get:
       consumes:
@@ -126,7 +201,7 @@ paths:
             type: object
       summary: Get the currently authenticated user.
       tags:
-      - Auth
+      - Profiles
   /public/:
     get:
       consumes:
@@ -178,6 +253,23 @@ paths:
               type: string
             type: object
       summary: Authenticate a user.
+      tags:
+      - Auth
+  /public/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout a user by clearing the Authorization
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Logout a user.
       tags:
       - Auth
   /public/health:

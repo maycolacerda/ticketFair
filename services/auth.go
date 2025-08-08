@@ -53,6 +53,15 @@ func NewAuthRequest(c *gin.Context) {
 
 }
 
+// Logout godoc
+//
+//	@Summary		Logout a user.
+//	@Description	Logout a user by clearing the Authorization
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]string
+//	@Router			/public/auth/logout [post]
 func Logout(c *gin.Context) {
 	c.Header("Authorization", "")
 	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})

@@ -43,7 +43,7 @@ func NewUser(c *gin.Context) {
 //
 //	@Summary		Get all users.
 //	@Description	Retrieve a list of all users.
-//	@Tags			Users
+//	@Tags			Profiles
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{array}		models.User
@@ -58,13 +58,13 @@ func GetUsers(c *gin.Context) {
 //
 //	@Summary		Get a user by ID.
 //	@Description	Retrieve a user by their ID.
-//	@Tags			Users
+//	@Tags			Profiles
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path	string	true	"User ID"
 //	@Success		200	{object}	models.User
 //	@Failure		404	{object}	map[string]string
-//	@Router			/private/users/me [get]
+//	@Router			/private/users/:id [get]
 func GetUserByID(c *gin.Context) {
 	userID, err := services.ExtractTokenID(c)
 	if err != nil {
@@ -83,7 +83,7 @@ func GetUserByID(c *gin.Context) {
 //
 //	@Summary		Get the currently authenticated user.
 //	@Description	Retrieve the details of the currently authenticated user.
-//	@Tags			Auth
+//	@Tags			Profiles
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	models.User
@@ -97,10 +97,10 @@ func CurrentUser(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
+	var userProfile models.Profile
+	if err := database.DB.First(&userProfile, "user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, userProfile)
 }

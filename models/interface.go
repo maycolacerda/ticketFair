@@ -47,6 +47,11 @@ func (User *User) BeforeCreate(tx *gorm.DB) (err error) {
 	hashedPassword = nil
 	return nil
 }
+func (Profile *Profile) BeforeCreate(tx *gorm.DB) (err error) {
+	Profile.ProfileID = uuid.New().String()
+
+	return nil
+}
 
 func (User *User) Validate() []string {
 	var errors []string
