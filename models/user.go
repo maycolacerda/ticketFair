@@ -5,5 +5,4 @@ type User struct {
 	Email    string `json:"email" gorm:"uniqueIndex;not null"`
 	Password string `json:"password" gorm:"not null"`
 	Username string `json:"username" gorm:"uniqueIndex"`
-	// Unique identifier for the user
 }

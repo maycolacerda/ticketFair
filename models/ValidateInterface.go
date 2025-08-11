@@ -2,10 +2,6 @@ package models
 
 import (
 	"regexp"
-
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 var (
@@ -29,29 +25,10 @@ var (
 )
 
 type ValidationsInterface interface {
-	BeforeCreate(tx *gorm.DB) (err error)
 	Validate() []string
 }
 
 // user validations
-
-func (User *User) BeforeCreate(tx *gorm.DB) (err error) {
-
-	User.UserID = uuid.New().String()
-
-	hashedPassword, hashErr := bcrypt.GenerateFromPassword([]byte(User.Password), bcrypt.DefaultCost)
-	if hashErr != nil {
-		return hashErr
-	}
-	User.Password = string(hashedPassword)
-	hashedPassword = nil
-	return nil
-}
-func (Profile *Profile) BeforeCreate(tx *gorm.DB) (err error) {
-	Profile.ProfileID = uuid.New().String()
-
-	return nil
-}
 
 func (User *User) Validate() []string {
 	var errors []string
@@ -86,7 +63,6 @@ func validadePasswordComplexity(password string) bool {
 }
 
 // Login request validations
-
 func (LoginRequest *LoginRequest) Validate() []string {
 	var errors []string
 	if LoginRequest.Email == "" {
@@ -129,5 +105,51 @@ func (Profile *Profile) Validate() []string {
 		errors = append(errors, "Address is required")
 	}
 
+	return errors
+}
+
+func (Merchant *Merchant) Validate() []string {
+	var errors []string
+	if Merchant.Name == "" {
+		errors = append(errors, "Name is required")
+	}
+	if !regexp.MustCompile(hasInvalidCharacter.String()).MatchString(Merchant.Name) {
+		errors = append(errors, "Name must contain only letters and numbers")
+	}
+	if Merchant.Description == "" {
+		errors = append(errors, "Description is required")
+	}
+	if !regexp.MustCompile(hasInvalidCharacter.String()).MatchString(Merchant.Description) {
+		errors = append(errors, "Description must contain only letters and numbers")
+	}
+	return errors
+}
+
+func (MerchantRep *MerchantRep) Validate() []string {
+	var errors []string
+	if MerchantRep.Name == "" {
+		errors = append(errors, "Name is required")
+	}
+	if !regexp.MustCompile(hasInvalidCharacter.String()).MatchString(MerchantRep.Name) {
+		errors = append(errors, "Name must contain only letters and numbers")
+	}
+	if MerchantRep.Role == "" {
+		errors = append(errors, "Role is required")
+	}
+	if !regexp.MustCompile(hasInvalidCharacter.String()).MatchString(MerchantRep.Role) {
+		errors = append(errors, "Role must contain only letters and numbers")
+	}
+	if MerchantRep.Email == "" {
+		errors = append(errors, "Email is required")
+	}
+	if !regexp.MustCompile(emailRegex).MatchString(MerchantRep.Email) {
+		errors = append(errors, "Invalid email format")
+	}
+	if MerchantRep.Password == "" {
+		errors = append(errors, "Password is required")
+	}
+	if !validadePasswordComplexity(MerchantRep.Password) {
+		errors = append(errors, "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
+	}
 	return errors
 }
