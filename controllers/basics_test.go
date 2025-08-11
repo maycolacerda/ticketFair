@@ -6,7 +6,19 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
+
+type MockGormDB struct {
+	CreateFunc func(value interface{}) *gorm.DB
+}
+
+func (m *MockGormDB) Create(value interface{}) *gorm.DB {
+	if m.CreateFunc != nil {
+		return m.CreateFunc(value)
+	}
+	return &gorm.DB{}
+}
 
 func setupTestRouter() *gin.Engine {
 	r := gin.Default()
@@ -17,6 +29,17 @@ func setupTestRouter() *gin.Engine {
 	r.GET("/users/:id", GetUserByID)
 	r.NoRoute(NotFound)
 	return r
+}
+
+type MockDB struct {
+	create func(value interface{}) *gorm.DB
+}
+
+func (m *MockDB) Create(value interface{}) *gorm.DB {
+	if m.create != nil {
+		return m.create(value)
+	}
+	return &gorm.DB{}
 }
 
 func TestGetHome(t *testing.T) {

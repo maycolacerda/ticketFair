@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/maycolacerda/ticketfair/models"
+	"gorm.io/gorm"
 )
 
 var UserTest = []struct {
@@ -14,6 +15,7 @@ var UserTest = []struct {
 	WantErr        bool
 	ExpectedStatus int
 	ExpectedError  string
+	MockCreate     func(value interface{}) *gorm.DB
 }{
 	{
 		Name:           "Invalid Password",

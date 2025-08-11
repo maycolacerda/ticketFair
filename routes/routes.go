@@ -33,6 +33,7 @@ func HandleRequests() {
 	private.POST("/profile/new", controllers.CreateProfile)
 	private.POST("/profile/update", controllers.UpdateProfile)
 	private.POST("/logout", services.Logout)
+
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.Run(":8000") // Listen and serve on localhost:8000
 }
