@@ -37,6 +37,7 @@ func (MerchantRep *MerchantRep) BeforeCreate(tx *gorm.DB) (err error) {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

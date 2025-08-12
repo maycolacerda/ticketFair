@@ -5,7 +5,6 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/maycolacerda/ticketfair/models"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -33,9 +32,4 @@ func InitDB() {
 	}
 	log.Println("Database connection established successfully")
 
-	Automigrate()
-}
-
-func Automigrate() {
-	DB.AutoMigrate(&models.User{})
 }

@@ -2,6 +2,8 @@ package models
 
 import (
 	"regexp"
+
+	"github.com/maycolacerda/ticketfair/database"
 )
 
 var (
@@ -150,6 +152,32 @@ func (MerchantRep *MerchantRep) Validate() []string {
 	}
 	if !validadePasswordComplexity(MerchantRep.Password) {
 		errors = append(errors, "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character")
+	}
+	if MerchantRep.MerchantID == "" {
+		errors = append(errors, "Merchant ID is required")
+	}
+	if err := database.DB.First(&MerchantRep, "merchant_id = ?", MerchantRep.MerchantID).Error; err != nil {
+		errors = append(errors, "Merchant ID Not Found")
+	}
+	return errors
+}
+
+func (Event *Event) Validate() []string {
+	var errors []string
+	if Event.MerchantID == "" {
+		errors = append(errors, "Merchant ID is required")
+	}
+	if Event.Name == "" {
+		errors = append(errors, "Name is required")
+	}
+	if Event.Description == "" {
+		errors = append(errors, "Description is required")
+	}
+	if Event.Date == "" {
+		errors = append(errors, "Date is required")
+	}
+	if Event.Location == "" {
+		errors = append(errors, "Location is required")
 	}
 	return errors
 }
