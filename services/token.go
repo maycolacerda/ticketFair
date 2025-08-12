@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateToken(c *gin.Context, userID string) (string, error) {
+func GenerateClientToken(c *gin.Context, userID string) (string, error) {
 	claims := jwt.MapClaims{}
 	claims["authorized"] = true
 	claims["user_id"] = userID
@@ -38,6 +38,22 @@ func ValidateToken(c *gin.Context) error {
 		return err
 	}
 	return nil
+}
+
+func GenerateMerchantToken(c *gin.Context, MerchantRepID, Role string) (string, error) {
+
+	claims := jwt.MapClaims{}
+	claims["authorized"] = true
+	claims["user_id"] = MerchantRepID
+	claims["role"] = Role
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenString, _ := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+
+	c.SetSameSite(http.SameSiteLaxMode)
+	return tokenString, nil
 }
 
 func ExtractToken(c *gin.Context) string {

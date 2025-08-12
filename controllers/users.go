@@ -30,13 +30,13 @@ func NewUser(c *gin.Context) {
 	if len(err) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user data", "details": err})
 		return
-	} else {
-		if err := database.DB.Create(&user).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"message": "User created successfully", "user_id": user.UserID})
 	}
+	if err := database.DB.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "User created successfully", "user_id": user.UserID})
+
 }
 
 // GetUsers godoc
