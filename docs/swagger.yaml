@@ -1,5 +1,26 @@
 basePath: /
 definitions:
+  models.Event:
+    properties:
+      date:
+        type: string
+      description:
+        type: string
+      event_id:
+        type: string
+      location:
+        type: string
+      merchant_id:
+        type: string
+      name:
+        type: string
+    required:
+    - date
+    - description
+    - location
+    - merchant_id
+    - name
+    type: object
   models.LoginRequest:
     properties:
       email:
@@ -10,6 +31,30 @@ definitions:
     required:
     - email
     - password
+    type: object
+  models.Merchant:
+    properties:
+      description:
+        type: string
+      merchant_id:
+        type: string
+      name:
+        type: string
+    type: object
+  models.MerchantRep:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      merchant_id:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      role:
+        type: string
     type: object
   models.Profile:
     properties:
@@ -54,6 +99,110 @@ info:
   title: Swagger Example API
   version: "1.0"
 paths:
+  /merchant/events/new/event:
+    post:
+      consumes:
+      - application/json
+      description: Create a new event with the provided details.
+      parameters:
+      - description: Event data
+        in: body
+        name: event
+        required: true
+        schema:
+          $ref: '#/definitions/models.Event'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Create a new event.
+      tags:
+      - Events
+  /merchant/new/rep:
+    post:
+      consumes:
+      - application/json
+      description: Create a new merchant representative with the provided details.
+      parameters:
+      - description: Merchant Representative data
+        in: body
+        name: merchantRep
+        required: true
+        schema:
+          $ref: '#/definitions/models.MerchantRep'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.MerchantRep'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new merchant representative.
+      tags:
+      - Merchant Representatives
+  /merchants/new/merchant:
+    post:
+      consumes:
+      - application/json
+      description: Create a new merchant
+      parameters:
+      - description: Merchant
+        in: body
+        name: merchant
+        required: true
+        schema:
+          $ref: '#/definitions/models.Merchant'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Merchant'
+        "400":
+          description: Bad Request
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Create a new merchant
+      tags:
+      - merchants
   /not-found:
     get:
       consumes:
@@ -225,7 +374,7 @@ paths:
       summary: Show the home page.
       tags:
       - Home
-  /public/auth/login:
+  /public/auth/client/login:
     post:
       consumes:
       - application/json

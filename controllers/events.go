@@ -8,6 +8,18 @@ import (
 	"github.com/maycolacerda/ticketfair/models"
 )
 
+// NewEvent godoc
+//
+//		@Summary		Create a new event.
+//		@Description	Create a new event with the provided details.
+//		@Tags			Events
+//		@Accept			json
+//		@Produce		json
+//		@Param			event	body	models.Event	true	"Event data"
+//		@Success		200	{object}	map[string]string
+//		@Failure		400	{object}	map[string]string
+//	 	@Failure 500 {object}  []string
+//		@Router /merchant/events/new/event [post]
 func NewEvent(c *gin.Context) {
 	var event models.Event
 	if err := c.ShouldBindJSON(&event); err != nil {

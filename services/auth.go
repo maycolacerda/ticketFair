@@ -20,7 +20,7 @@ import (
 //	@Success		200	{object}	map[string]string
 //	@Failure		400	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
-//	@Router			/public/auth/login [post]
+//	@Router			/public/auth/client/login [post]
 func NewAuthRequestClient(c *gin.Context) {
 	var LoginRequest models.LoginRequest
 	var user models.User
@@ -51,6 +51,19 @@ func NewAuthRequestClient(c *gin.Context) {
 
 	}
 }
+
+// NewAuthRequestMerchant  godoc
+//
+//	@Summary		Authenticate a merchant.
+//	@Description	Authenticate a merchant with email and password
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+// @Param			loginRequest	body	models.LoginRequest	true	"Login request data"
+// @Success		200	{object}	map[string]string
+//	@Failure		400	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Router			/public/auth/merchant/login [post]
 
 func NewAuthRequestMerchant(c *gin.Context) {
 	var LoginRequest models.LoginRequest

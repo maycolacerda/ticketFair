@@ -16,9 +16,9 @@ import (
 // @Produce json
 // @Param merchant body models.Merchant true "Merchant"
 // @Success 201 {object} models.Merchant
-// @Failure 400 {object} gin.H{"error": string}
-// @Failure 500 {object} gin.H{"error": string}
-// @Router /merchants [post]
+// @Failure 400 {object} []string
+// @Failure 500 {object} []string
+// @Router /merchants/new/merchant [post]
 func NewMerchant(c *gin.Context) {
 	var merchant models.Merchant
 	if err := c.ShouldBindJSON(&merchant); err != nil {

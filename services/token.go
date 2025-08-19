@@ -86,3 +86,24 @@ func ExtractTokenID(c *gin.Context) (string, error) {
 	}
 	return "", err
 }
+
+func ExtractRole(c *gin.Context) (string, error) {
+	tokenString := ExtractToken(c)
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		role := claims["role"].(string)
+		return role, nil
+	}
+	return "", err
+}

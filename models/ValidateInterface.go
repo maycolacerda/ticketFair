@@ -19,7 +19,7 @@ var (
 	// Pelo menos 8 caracteres no total
 	hasMinLength = regexp.MustCompile(`.{8,}`)
 	// Verifica se username possui algum caractere especial
-	hasInvalidCharacter = regexp.MustCompile(`^[a-zA-Z0-9]*$`)
+	hasInvalidCharacter = regexp.MustCompile(`^[a-zA-Z0-9\s]*$`)
 	// Verifica se a string possui apenas números
 	hasonlynumbers = regexp.MustCompile(`^[0-9]*$`)
 	// Verifica se a string possui apenas letras
@@ -129,6 +129,8 @@ func (Merchant *Merchant) Validate() []string {
 
 func (MerchantRep *MerchantRep) Validate() []string {
 	var errors []string
+	var merchant Merchant
+
 	if MerchantRep.Name == "" {
 		errors = append(errors, "Name is required")
 	}
@@ -156,7 +158,7 @@ func (MerchantRep *MerchantRep) Validate() []string {
 	if MerchantRep.MerchantID == "" {
 		errors = append(errors, "Merchant ID is required")
 	}
-	if err := database.DB.First(&MerchantRep, "merchant_id = ?", MerchantRep.MerchantID).Error; err != nil {
+	if err := database.DB.First(&merchant, "merchant_id = ?", MerchantRep.MerchantID).Error; err != nil {
 		errors = append(errors, "Merchant ID Not Found")
 	}
 	return errors
