@@ -27,8 +27,6 @@ func HandleRequests() {
 	public.POST("/auth/merchant/login", services.NewAuthRequestMerchant)
 	public.POST("/auth/logout", services.Logout)
 	public.POST("/newuser", controllers.NewUser)
-	public.POST("/merchants/new/merchant", controllers.NewMerchant)
-	public.POST("/merchant/new/rep", controllers.NewMerchantRep)
 
 	//private
 	private.Use(middlewares.ClientMiddleware())
@@ -43,6 +41,11 @@ func HandleRequests() {
 	merchant.Use(middlewares.MerchantMiddleware())
 	merchant.POST("/merchant/events/new", controllers.NewEvent)
 	merchant.POST("/merchant/login", services.NewAuthRequestMerchant)
+	merchant.POST("/merchant/update", controllers.UpdateMerchant)
+	merchant.POST("/merchant/rep/new", controllers.NewMerchantRep)
+	merchant.POST("/merchant/events/update", controllers.UpdateEvent)
+	merchant.POST("/merchant/rep/update", controllers.UpdateMerchantRep)
+
 	merchant.POST("/merchant/logout", services.Logout)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
