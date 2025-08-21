@@ -35,3 +35,31 @@ func NewMerchant(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, merchant)
 }
+
+// UpdateMerchant godoc
+// @Summary Update a merchant
+// @Description Update a merchant
+// @Tags merchants
+// @Accept json
+// @Produce json
+// @Param merchant body models.Merchant true "Merchant"
+// @Success 200 {object} models.Merchant
+// @Failure 400
+// @Failure 500
+// @router /merchant/update [post]
+func UpdateMerchant(c *gin.Context) {
+	var merchant models.Merchant
+	if err := c.ShouldBindJSON(&merchant); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := merchant.Validate(); len(err) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"errors": err})
+		return
+	}
+	if err := database.DB.Save(&merchant).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+	c.JSON(http.StatusOK, merchant)
+
+}
