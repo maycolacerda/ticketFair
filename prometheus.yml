@@ -1,0 +1,24 @@
+global:
+  # Interval for Prometheus to scrape targets
+  scrape_interval: 15s
+
+scrape_configs:
+  # 1. Prometheus itself (monitoring the monitoring service)
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. Host System Metrics (via Node Exporter)
+  # Since Node Exporter uses network_mode: "host", it's reachable via the host's IP.
+  - job_name: 'node_exporter'
+    static_configs:
+      # Node Exporter default port is 9100
+      - targets: ['localhost:9100']
+  - job_name: 'TicketFair'
+    static_configs:
+      - targets: ['localhost:8000']
+  # database monitoring
+  - job_name: 'database'
+    static_configs:
+      - targets: ['localhost:3306']
+          

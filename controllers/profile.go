@@ -69,3 +69,14 @@ func UpdateProfile(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
 }
+
+func GetProfile(c *gin.Context) {
+	userID, _ := services.ExtractTokenID(c)
+	var profile models.Profile
+	if err := database.DB.First(&profile, "user_id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+		return
+	}
+	c.JSON(http.StatusOK, profile)
+
+}

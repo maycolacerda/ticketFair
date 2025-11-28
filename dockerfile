@@ -1,5 +1,5 @@
 
-FROM golang:1.22-alpine as builder
+FROM golang:1.25-alpine as builder
 
 
 RUN apk update && apk upgrade --no-cache
