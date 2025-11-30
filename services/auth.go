@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -26,28 +27,39 @@ func NewAuthRequestClient(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&LoginRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
+		slog.Debug("Invalid request body", "error", err)
 		return
 	}
 	if err := LoginRequest.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		slog.Debug("Bad Request", "error", err)
 		return
 	}
 	if err := database.DB.First(&user, "email = ?", LoginRequest.Email).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Email or password is incorrect"})
+		slog.Info("Auth request Denied", "Email", LoginRequest.Email, "error", err)
 		return
 	} else {
 		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(LoginRequest.Password)); err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Email or password is incorrect"})
+			slog.Info("Auth request Denied", "Email", LoginRequest.Email, "error", err)
 			return
 		}
 
 		token, err := GenerateClientToken(c, user.UserID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+			slog.Error("Failed to generate token", "error", err)
 			return
 		}
 		c.Header("Authorization", "Bearer "+token)
 		c.JSON(http.StatusOK, gin.H{"message": "Login successful", "user_id": user.UserID})
+
+		slog.Info(
+			"User logged in",
+			"email", user.Email,
+			"user_id", user.UserID,
+		)
 
 	}
 }

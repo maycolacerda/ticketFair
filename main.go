@@ -1,8 +1,11 @@
 package main
 
 import (
+	"log/slog"
+
 	"github.com/maycolacerda/ticketfair/database"
 	"github.com/maycolacerda/ticketfair/routes"
+	"github.com/maycolacerda/ticketfair/services"
 	_ "github.com/swaggo/files"
 	_ "github.com/swaggo/gin-swagger"
 )
@@ -28,7 +31,9 @@ import (
 // @externalDocs.url			https://swagger.io/resources/open-api/
 func main() {
 
-	// Initialize the routes
+	services.Log()
+	slog.Info("Initializing database...")
 	database.InitDB()
+	slog.Info("Initializing routes...")
 	routes.HandleRequests()
 }
