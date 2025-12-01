@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -52,15 +53,20 @@ func UpdateMerchantRep(c *gin.Context) {
 	var merchantRep models.MerchantRep
 	if err := c.ShouldBindJSON(&merchantRep); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		slog.Warn("Invalid request body", "details", err.Error)
 		return
 	}
 	if err := merchantRep.Validate(); len(err) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"errors": err})
+		slog.Warn("Invalid request body", "details", err)
 		return
 	}
 	if err := database.DB.Save(&merchantRep).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to update merchant representative", "details", err.Error)
+		return
 	}
 	c.JSON(http.StatusOK, merchantRep)
+	slog.Info("Merchant representative updated", "merchant_rep_id", merchantRep.MerchantRepID)
 
 }

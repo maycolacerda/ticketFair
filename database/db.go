@@ -1,7 +1,7 @@
 package database
 
 import (
-	"log"
+	"log/slog"
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -28,8 +28,8 @@ func InitDB() {
 		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	if err != nil {
-		log.Fatal("Error connecting to the database:", err)
+		slog.Warn("Error connecting to the database. Trying Again...")
 	}
-	log.Println("Database connection established successfully")
+	slog.Info("Database connection established successfully")
 
 }

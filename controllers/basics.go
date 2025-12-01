@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ import (
 //	@Router			/public/ [get]
 func GetHome(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Welcome to the Ticket Fair API!"})
+
 }
 
 // HealthCheck godoc
@@ -43,4 +45,5 @@ func HealthCheck(c *gin.Context) {
 //	@Router			/not-found [get]
 func NotFound(c *gin.Context) {
 	c.JSON(http.StatusNotFound, gin.H{"error": "Página não encontrada"})
+	slog.Warn("Page not found", "Path", c.Request.URL.Path, "Method", c.Request.Method)
 }

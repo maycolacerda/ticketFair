@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -23,17 +24,21 @@ func NewMerchant(c *gin.Context) {
 	var merchant models.Merchant
 	if err := c.ShouldBindJSON(&merchant); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		slog.Warn("Invalid request body", "details", err.Error)
 		return
 	}
 	if err := merchant.Validate(); len(err) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"errors": err})
+		slog.Warn("Invalid request body", "details", err)
 		return
 	}
 	if err := database.DB.Create(&merchant).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to create merchant", "details", err.Error)
 		return
 	}
 	c.JSON(http.StatusCreated, merchant)
+	slog.Info("Merchant created", "merchant_id", merchant.MerchantID)
 }
 
 // UpdateMerchant godoc
@@ -51,15 +56,20 @@ func UpdateMerchant(c *gin.Context) {
 	var merchant models.Merchant
 	if err := c.ShouldBindJSON(&merchant); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		slog.Warn("Invalid request body", "details", err.Error)
 		return
 	}
 	if err := merchant.Validate(); len(err) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"errors": err})
+		slog.Warn("Invalid request body", "details", err)
 		return
 	}
 	if err := database.DB.Save(&merchant).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to update merchant", "details", err.Error)
+		return
 	}
 	c.JSON(http.StatusOK, merchant)
+	slog.Info("Merchant updated", "merchant_id", merchant.MerchantID)
 
 }

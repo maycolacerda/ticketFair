@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"io"
+
 	"github.com/gin-gonic/gin"
 	"github.com/maycolacerda/ticketfair/controllers"
 	_ "github.com/maycolacerda/ticketfair/docs" // Import the generated
@@ -11,7 +13,8 @@ import (
 )
 
 func HandleRequests() {
-
+	gin.SetMode(gin.ReleaseMode)
+	gin.DefaultWriter = io.Discard
 	r := gin.Default()
 	r.GET("/", controllers.GetHome)
 	r.NoRoute(controllers.NotFound)
@@ -21,6 +24,7 @@ func HandleRequests() {
 	merchant := r.Group("/merchant")
 
 	//public
+	public.Use(middlewares.PublicMidleware())
 	public.GET("/health", controllers.HealthCheck)
 	public.POST("/register", controllers.NewUser)
 	public.POST("/auth/client/login", services.NewAuthRequestClient)

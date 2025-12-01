@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,17 +25,21 @@ func NewUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
+		slog.Warn("Invalid request body", "details", err.Error())
 		return
 	}
 	err := user.Validate()
 	if len(err) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user data", "details": err})
+		slog.Warn("Invalid user data", "details", err)
 		return
 	}
 	if err := database.DB.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		slog.Error("Failed to create user", "details", err)
 		return
 	}
+	slog.Info("User Created", "user_id", user.UserID)
 	c.JSON(http.StatusOK, gin.H{"message": "User created successfully", "user_id": user.UserID})
 
 }
@@ -70,11 +75,13 @@ func GetUserByID(c *gin.Context) {
 	userID, err := services.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		slog.Warn("Unauthorized", "user_id", userID)
 		return
 	}
 	var user models.User
 	if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		slog.Warn("User not found", "user_id", userID)
 		return
 	}
 	c.JSON(http.StatusOK, user)
@@ -95,12 +102,14 @@ func CurrentUser(c *gin.Context) {
 	userID, err := services.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		slog.Warn("Unauthorized", "user_id", userID)
 		return
 	}
 
 	var userProfile models.Profile
 	if err := database.DB.First(&userProfile, "user_id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		slog.Warn("User not found", "user_id", userID)
 		return
 	}
 	c.JSON(http.StatusOK, userProfile)

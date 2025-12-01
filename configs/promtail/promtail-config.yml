@@ -20,8 +20,7 @@ scrape_configs:
       job: varlogs
       __path__: /var/log/*log
   
-## docker logs
-
+# docker logs
 - job_name: docker 
   pipeline_stages:
     - docker: {}

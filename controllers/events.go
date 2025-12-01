@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -24,17 +25,21 @@ func NewEvent(c *gin.Context) {
 	var event models.Event
 	if err := c.ShouldBindJSON(&event); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
+		slog.Warn("Invalid request body", "details", err.Error)
 		return
 	}
 	if err := event.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		slog.Warn("Invalid request body", "details", err)
 		return
 	}
 	if err := database.DB.Create(&event).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create event"})
+		slog.Error("Failed to create event", "details", err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Event created successfully"})
+	slog.Info("Event created", "event_id", event.EventID)
 }
 
 // NewEvent godoc
@@ -53,15 +58,20 @@ func UpdateEvent(c *gin.Context) {
 	var event models.Event
 	if err := c.ShouldBindJSON(&event); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
+		slog.Warn("Invalid request body", "details", err.Error)
 		return
 	}
 	if err := event.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		slog.Warn("Invalid request body", "details", err)
 		return
 	}
 	if err := database.DB.Save(&event).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update event"})
+		slog.Error("Failed to update event", "details", err)
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Event updated successfully"})
+	slog.Info("Event updated", "event_id", event.EventID)
 
 }
