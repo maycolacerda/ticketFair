@@ -1,123 +1,95 @@
+// services/auth.go — service layer only, no HTTP, no gin
 package services
 
 import (
+	"errors"
 	"log/slog"
-	"net/http"
+	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/maycolacerda/ticketfair/database"
+	"github.com/maycolacerda/ticketfair/dto"
 	"github.com/maycolacerda/ticketfair/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// NewAuthRequest godoc
-//
-//	@Summary		Authenticate a user.
-//	@Description	Authenticate a user with email and password
-//	@Tags			Auth
-//	@Accept			json
-//	@Produce		json
-//	@Param			loginRequest	body	models.LoginRequest	true	"Login request data"
-//	@Success		200	{object}	map[string]string
-//	@Failure		400	{object}	map[string]string
-//	@Failure		404	{object}	map[string]string
-//	@Router			/public/auth/client/login [post]
-func NewAuthRequestClient(c *gin.Context) {
-	var LoginRequest models.LoginRequest
+func AuthenticateClient(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	var user models.User
-	if err := c.ShouldBindJSON(&LoginRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
-		slog.Debug("Invalid request body", "error", err)
-		return
-	}
-	if err := LoginRequest.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		slog.Debug("Bad Request", "error", err)
-		return
-	}
-	if err := database.DB.First(&user, "email = ?", LoginRequest.Email).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Email or password is incorrect"})
-		slog.Info("Auth request Denied", "Email", LoginRequest.Email, "error", err)
-		return
-	} else {
-		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(LoginRequest.Password)); err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Email or password is incorrect"})
-			slog.Info("Auth request Denied", "Email", LoginRequest.Email, "error", err)
-			return
-		}
 
-		token, err := GenerateClientToken(c, user.UserID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-			slog.Error("Failed to generate token", "error", err)
-			return
-		}
-		c.Header("Authorization", "Bearer "+token)
-		c.JSON(http.StatusOK, gin.H{"message": "Login successful", "user_id": user.UserID})
+	email := strings.ToLower(strings.TrimSpace(req.Email))
 
-		slog.Info(
-			"User logged in",
-			"email", user.Email,
-			"user_id", user.UserID,
-		)
-
+	if err := database.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		slog.Warn("Client login failed — email not found", "email", email)
+		return nil, errors.New("invalid credentials")
 	}
+
+	if !user.Active {
+		slog.Warn("Client login failed — account disabled", "user_id", user.UserID)
+		return nil, errors.New("account is disabled")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		slog.Warn("Client login failed — wrong password", "user_id", user.UserID)
+		return nil, errors.New("invalid credentials")
+	}
+
+	token, expiresAt, err := GenerateToken(user.UserID, RoleClient, "")
+	if err != nil {
+		slog.Error("Client token generation failed", "user_id", user.UserID, "error", err.Error())
+		return nil, errors.New("failed to generate token")
+	}
+
+	slog.Info("Client login successful", "user_id", user.UserID)
+
+	return &dto.LoginResponse{
+		Token:     token,
+		ExpiresAt: expiresAt,
+		User: dto.UserResponse{
+			UserID:    user.UserID,
+			Email:     user.Email,
+			Username:  user.Username,
+			CreatedAt: user.CreatedAt,
+		},
+	}, nil
 }
 
-// NewAuthRequestMerchant  godoc
-//
-//	@Summary		Authenticate a merchant.
-//	@Description	Authenticate a merchant with email and password
-//	@Tags			Auth
-//	@Accept			json
-//	@Produce		json
-// @Param			loginRequest	body	models.LoginRequest	true	"Login request data"
-// @Success		200	{object}	map[string]string
-//	@Failure		400	{object}	map[string]string
-//	@Failure		404	{object}	map[string]string
-//	@Router			/public/auth/merchant/login [post]
+func AuthenticateMerchant(req dto.LoginRequest) (*dto.MerchantLoginResponse, error) {
+	var merchant models.Merchant
 
-func NewAuthRequestMerchant(c *gin.Context) {
-	var LoginRequest models.LoginRequest
-	var merchantRep models.MerchantRep
-	if err := c.ShouldBindJSON(&LoginRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
-		return
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+
+	if err := database.DB.Where("email = ?", email).First(&merchant).Error; err != nil {
+		slog.Warn("Merchant login failed — email not found", "email", email)
+		return nil, errors.New("invalid credentials")
 	}
-	if err := LoginRequest.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
+
+	if !merchant.Active {
+		slog.Warn("Merchant login failed — account disabled", "merchant_id", merchant.MerchantID)
+		return nil, errors.New("account is disabled")
 	}
-	if err := database.DB.First(&merchantRep, "email = ?", LoginRequest.Email).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Email or password is incorrect"})
-		return
-	} else {
-		if err := bcrypt.CompareHashAndPassword([]byte(merchantRep.Password), []byte(LoginRequest.Password)); err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Email or password is incorrect"})
-			return
-		}
 
-		token, err := GenerateMerchantToken(c, merchantRep.MerchantRepID, merchantRep.Role)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-			return
-		}
-		c.Header("Authorization", "Bearer "+token)
-		c.JSON(http.StatusOK, gin.H{"message": "Login successful", "merchant_id": merchantRep.MerchantID, "role": merchantRep.Role, "Merchant Rep ID": merchantRep.MerchantRepID})
-
+	if err := bcrypt.CompareHashAndPassword([]byte(merchant.Password), []byte(req.Password)); err != nil {
+		slog.Warn("Merchant login failed — wrong password", "merchant_id", merchant.MerchantID)
+		return nil, errors.New("invalid credentials")
 	}
-}
 
-// Logout godoc
-//
-//	@Summary		Logout a user.
-//	@Description	Logout a user by clearing the Authorization
-//	@Tags			Auth
-//	@Accept			json
-//	@Produce		json
-//	@Success		200	{object}	map[string]string
-//	@Router			/public/auth/logout [post]
-func Logout(c *gin.Context) {
-	c.Header("Authorization", "")
-	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
+	token, expiresAt, err := GenerateToken(merchant.MerchantID, RoleMerchant, merchant.MerchantID)
+	if err != nil {
+		slog.Error("Merchant token generation failed", "merchant_id", merchant.MerchantID, "error", err.Error())
+		return nil, errors.New("failed to generate token")
+	}
+
+	slog.Info("Merchant login successful", "merchant_id", merchant.MerchantID)
+
+	return &dto.MerchantLoginResponse{
+		Token:     token,
+		ExpiresAt: expiresAt,
+		Merchant: dto.MerchantResponse{
+			MerchantID:  merchant.MerchantID,
+			Name:        merchant.Name,
+			Email:       merchant.Email,
+			Phone:       merchant.Phone,
+			Description: merchant.Description,
+			CreatedAt:   merchant.CreatedAt,
+		},
+	}, nil
 }

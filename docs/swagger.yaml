@@ -1,10 +1,155 @@
-basePath: /
+basePath: /api/v1
 definitions:
-  models.Event:
+  dto.AddressResponse:
     properties:
-      date:
+      address_id:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      state:
+        type: string
+      street:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  dto.CreateAddressRequest:
+    properties:
+      city:
+        type: string
+      country:
+        description: ISO 3166-1 alpha-2 e.g. "BR"
+        type: string
+      state:
+        type: string
+      street:
+        type: string
+      zip_code:
+        type: string
+    required:
+    - city
+    - country
+    - state
+    - street
+    - zip_code
+    type: object
+  dto.CreateEventRequest:
+    properties:
+      capacity:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 1000
+        type: string
+      end_time:
+        type: string
+      location:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      start_time:
+        type: string
+    required:
+    - capacity
+    - end_time
+    - location
+    - name
+    - start_time
+    type: object
+  dto.CreateMerchantRepRequest:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      role:
+        enum:
+        - admin
+        - manager
+        - staff
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - phone
+    - role
+    type: object
+  dto.CreateMerchantRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - phone
+    type: object
+  dto.CreateProfileRequest:
+    properties:
+      address:
+        allOf:
+        - $ref: '#/definitions/dto.CreateAddressRequest'
+        description: ← nested
+      first_name:
+        type: string
+      last_name:
+        type: string
+      phone_number:
+        type: string
+    required:
+    - address
+    - first_name
+    - last_name
+    - phone_number
+    type: object
+  dto.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  dto.EventResponse:
+    properties:
+      active:
+        type: boolean
+      capacity:
+        type: integer
+      created_at:
         type: string
       description:
+        type: string
+      end_time:
         type: string
       event_id:
         type: string
@@ -14,51 +159,129 @@ definitions:
         type: string
       name:
         type: string
-    required:
-    - date
-    - description
-    - location
-    - merchant_id
-    - name
+      start_time:
+        type: string
     type: object
-  models.LoginRequest:
+  dto.LoginRequest:
     properties:
       email:
         type: string
       password:
-        minLength: 8
         type: string
     required:
     - email
     - password
     type: object
-  models.Merchant:
+  dto.LoginResponse:
     properties:
-      description:
+      expires_at:
+        description: unix timestamp
+        type: integer
+      token:
         type: string
-      merchant_id:
-        type: string
-      name:
+      user:
+        $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.LogoutResponse:
+    properties:
+      message:
         type: string
     type: object
-  models.MerchantRep:
+  dto.MerchantLoginResponse:
+    properties:
+      expires_at:
+        type: integer
+      merchant:
+        allOf:
+        - $ref: '#/definitions/dto.MerchantResponse'
+        description: ← named merchant, not user
+      token:
+        type: string
+    type: object
+  dto.MerchantRepLoginRequest:
     properties:
       email:
         type: string
-      id:
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.MerchantRepLoginResponse:
+    properties:
+      expires_at:
+        type: integer
+      rep:
+        $ref: '#/definitions/dto.MerchantRepResponse'
+      token:
+        type: string
+    type: object
+  dto.MerchantRepResponse:
+    properties:
+      created_at:
+        type: string
+      email:
         type: string
       merchant_id:
         type: string
+      merchant_rep_id:
+        type: string
       name:
         type: string
-      password:
+      phone:
         type: string
       role:
         type: string
     type: object
-  models.Profile:
+  dto.MerchantResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      email:
+        type: string
+      merchant_id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+  dto.PaginatedEventsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.EventResponse'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  dto.PaginatedUsersResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dto.UserResponse'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  dto.ProfileResponse:
     properties:
       address:
+        allOf:
+        - $ref: '#/definitions/dto.AddressResponse'
+        description: ← nested
+      created_at:
         type: string
       first_name:
         type: string
@@ -71,138 +294,339 @@ definitions:
       user_id:
         type: string
     type: object
-  models.User:
+  dto.UpdateAddressRequest:
     properties:
-      email:
+      city:
         type: string
-      password:
+      country:
+        type: string
+      state:
+        type: string
+      street:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  dto.UpdateEventRequest:
+    properties:
+      active:
+        description: pointer — false is a valid value
+        type: boolean
+      capacity:
+        minimum: 1
+        type: integer
+      description:
+        maxLength: 1000
+        type: string
+      end_time:
+        type: string
+      location:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      start_time:
+        type: string
+    type: object
+  dto.UpdateMerchantRepRequest:
+    properties:
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      phone:
+        type: string
+      role:
+        enum:
+        - admin
+        - manager
+        - staff
+        type: string
+    type: object
+  dto.UpdateMerchantRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      phone:
+        type: string
+    type: object
+  dto.UpdateProfileRequest:
+    properties:
+      address:
+        allOf:
+        - $ref: '#/definitions/dto.UpdateAddressRequest'
+        description: ← nested
+      first_name:
+        type: string
+      last_name:
+        type: string
+      phone_number:
+        type: string
+    type: object
+  dto.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
         type: string
       user_id:
         type: string
       username:
         type: string
     type: object
-externalDocs:
-  description: OpenAPI
-  url: https://swagger.io/resources/open-api/
-host: localhost:8000
+host: ticketfair.localhost
 info:
   contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
-  description: This is a sample server celler server.
+    email: support@ticketfair.com
+    name: TicketFair Support
+  description: TicketFair event ticketing platform API
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  termsOfService: http://swagger.io/terms/
-  title: Swagger Example API
+  title: TicketFair API
   version: "1.0"
 paths:
-  /merchant/events/new/event:
-    post:
+  /merchant/events/{id}:
+    put:
       consumes:
       - application/json
-      description: Create a new event with the provided details.
+      description: Update an event under the authenticated merchant
       parameters:
-      - description: Event data
+      - description: Event UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated event data
         in: body
         name: event
         required: true
         schema:
-          $ref: '#/definitions/models.Event'
+          $ref: '#/definitions/dto.UpdateEventRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.EventResponse'
         "400":
           description: Bad Request
           schema:
             additionalProperties:
               type: string
             type: object
-        "500":
-          description: Internal Server Error
+        "401":
+          description: Unauthorized
           schema:
-            items:
+            additionalProperties:
               type: string
-            type: array
-      summary: Create a new event.
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update an event
       tags:
       - Events
-  /merchant/new/rep:
+  /merchant/events/new:
     post:
       consumes:
       - application/json
-      description: Create a new merchant representative with the provided details.
+      description: Create a new event under the authenticated merchant
       parameters:
-      - description: Merchant Representative data
+      - description: Event data
+        in: body
+        name: event
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateEventRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.EventResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new event
+      tags:
+      - Events
+  /merchant/rep/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update a rep's details under the authenticated merchant
+      parameters:
+      - description: Merchant Rep ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated rep data
         in: body
         name: merchantRep
         required: true
         schema:
-          $ref: '#/definitions/models.MerchantRep'
+          $ref: '#/definitions/dto.UpdateMerchantRepRequest'
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: OK
           schema:
-            $ref: '#/definitions/models.MerchantRep'
+            $ref: '#/definitions/dto.MerchantRepResponse'
         "400":
           description: Bad Request
           schema:
             additionalProperties:
               type: string
             type: object
-        "500":
-          description: Internal Server Error
+        "401":
+          description: Unauthorized
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Create a new merchant representative.
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a merchant representative
       tags:
       - Merchant Representatives
-  /merchants/new/merchant:
+  /merchant/rep/new:
     post:
       consumes:
       - application/json
-      description: Create a new merchant
+      description: Create a new rep under the authenticated merchant
       parameters:
-      - description: Merchant
+      - description: Merchant rep data
+        in: body
+        name: merchantRep
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateMerchantRepRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.MerchantRepResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new merchant representative
+      tags:
+      - Merchant Representatives
+  /merchant/update:
+    put:
+      consumes:
+      - application/json
+      description: Update the authenticated merchant's details
+      parameters:
+      - description: Updated merchant data
         in: body
         name: merchant
         required: true
         schema:
-          $ref: '#/definitions/models.Merchant'
+          $ref: '#/definitions/dto.UpdateMerchantRequest'
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: OK
           schema:
-            $ref: '#/definitions/models.Merchant'
+            $ref: '#/definitions/dto.MerchantResponse'
         "400":
           description: Bad Request
           schema:
-            items:
+            additionalProperties:
               type: string
-            type: array
-        "500":
-          description: Internal Server Error
+            type: object
+        "401":
+          description: Unauthorized
           schema:
-            items:
+            additionalProperties:
               type: string
-            type: array
-      summary: Create a new merchant
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a merchant
       tags:
-      - merchants
+      - Merchants
   /not-found:
     get:
       consumes:
@@ -220,128 +644,16 @@ paths:
       summary: Handle not found routes.
       tags:
       - NotFound
-  /private/profile/new:
-    post:
-      consumes:
-      - application/json
-      description: Create a new profile with user ID and other details.
-      parameters:
-      - description: Profile data
-        in: body
-        name: profile
-        required: true
-        schema:
-          $ref: '#/definitions/models.Profile'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Create a new profile.
-      tags:
-      - Profiles
-  /private/profile/update:
-    post:
-      consumes:
-      - application/json
-      description: Update an existing profile with new details.
-      parameters:
-      - description: Profile data
-        in: body
-        name: profile
-        required: true
-        schema:
-          $ref: '#/definitions/models.Profile'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Update an existing profile.
-      tags:
-      - Profiles
-  /private/users:
+  /private/profile:
     get:
-      consumes:
-      - application/json
-      description: Retrieve a list of all users.
+      description: Retrieve the authenticated user's profile
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.Profile'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get all users.
-      tags:
-      - Profiles
-  /private/users/:id:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve a user by their ID.
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.User'
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get a user by ID.
-      tags:
-      - Profiles
-  /private/users/me:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve the details of the currently authenticated user.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.User'
+            $ref: '#/definitions/dto.ProfileResponse'
         "401":
           description: Unauthorized
           schema:
@@ -354,9 +666,183 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Get the currently authenticated user.
+      summary: Get the current user's profile
       tags:
-      - Profiles
+      - Profile
+    post:
+      consumes:
+      - application/json
+      description: Create a profile for the authenticated user
+      parameters:
+      - description: Profile data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a user profile
+      tags:
+      - Profile
+    put:
+      consumes:
+      - application/json
+      description: Update the authenticated user's profile
+      parameters:
+      - description: Updated profile data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a user profile
+      tags:
+      - Profile
+  /private/users:
+    get:
+      description: Retrieve a paginated list of users
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaginatedUsersResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all users
+      tags:
+      - Users
+  /private/users/{id}:
+    get:
+      description: Retrieve a user by their UUID
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a user by ID
+      tags:
+      - Users
+  /private/users/me:
+    get:
+      description: Retrieve profile of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get the current authenticated user
+      tags:
+      - Users
   /public/:
     get:
       consumes:
@@ -378,55 +864,230 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate a user with email and password
+      description: Authenticate a client and return a JWT token
       parameters:
-      - description: Login request data
+      - description: Login credentials
         in: body
-        name: loginRequest
+        name: credentials
         required: true
         schema:
-          $ref: '#/definitions/models.LoginRequest'
+          $ref: '#/definitions/dto.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.LoginResponse'
         "400":
           description: Bad Request
           schema:
             additionalProperties:
               type: string
             type: object
-        "404":
-          description: Not Found
+        "401":
+          description: Unauthorized
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Authenticate a user.
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Client login
       tags:
       - Auth
   /public/auth/logout:
     post:
-      consumes:
-      - application/json
-      description: Logout a user by clearing the Authorization
+      description: Invalidate the current session (client-side token removal)
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
+            $ref: '#/definitions/dto.LogoutResponse'
+      summary: Logout
+      tags:
+      - Auth
+  /public/auth/merchant/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a merchant and return a JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MerchantLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
             additionalProperties:
               type: string
             type: object
-      summary: Logout a user.
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Merchant login
       tags:
       - Auth
+  /public/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with email, password, and username
+      parameters:
+      - description: User registration data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - Auth
+  /public/auth/rep/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a merchant rep and return a JWT with role and merchant
+        context
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/dto.MerchantRepLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.MerchantRepLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Merchant representative login
+      tags:
+      - Auth
+  /public/events:
+    get:
+      description: Retrieve a paginated list of active upcoming events
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaginatedEventsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all active events
+      tags:
+      - Events
+  /public/events/{id}:
+    get:
+      description: Retrieve a single event by its UUID
+      parameters:
+      - description: Event UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.EventResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get an event by ID
+      tags:
+      - Events
   /public/health:
     get:
       consumes:
@@ -443,37 +1104,49 @@ paths:
       summary: Show the status of the server.
       tags:
       - Health
-  /public/newuser:
+  /public/merchant/register:
     post:
       consumes:
       - application/json
-      description: Create a new user with email, password, and username.
+      description: Create a new merchant account
       parameters:
-      - description: User data
+      - description: Merchant data
         in: body
-        name: user
+        name: merchant
         required: true
         schema:
-          $ref: '#/definitions/models.User'
+          $ref: '#/definitions/dto.CreateMerchantRequest'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.MerchantResponse'
         "400":
           description: Bad Request
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Create a new user.
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new merchant
       tags:
-      - Users
+      - Merchants
 securityDefinitions:
-  BasicAuth:
-    type: basic
+  BearerAuth:
+    description: 'JWT Bearer token. Format: "Bearer <token>"'
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

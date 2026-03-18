@@ -1,3 +1,4 @@
+// controllers/merchant.go
 package controllers
 
 import (
@@ -5,71 +6,99 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/maycolacerda/ticketfair/database"
-	"github.com/maycolacerda/ticketfair/models"
+	"github.com/maycolacerda/ticketfair/dto"
+	"github.com/maycolacerda/ticketfair/services"
 )
 
 // NewMerchant godoc
-// @Summary Create a new merchant
-// @Description Create a new merchant
-// @Tags merchants
-// @Accept json
-// @Produce json
-// @Param merchant body models.Merchant true "Merchant"
-// @Success 201 {object} models.Merchant
-// @Failure 400 {object} []string
-// @Failure 500 {object} []string
-// @Router /merchants/new/merchant [post]
+//
+//	@Summary		Create a new merchant
+//	@Description	Create a new merchant account
+//	@Tags			Merchants
+//	@Accept			json
+//	@Produce		json
+//	@Param			merchant	body		dto.CreateMerchantRequest	true	"Merchant data"
+//	@Success		201			{object}	dto.MerchantResponse
+//	@Failure		400			{object}	map[string]string
+//	@Failure		409			{object}	map[string]string
+//	@Failure		422			{object}	map[string]interface{}
+//	@Router			/public/merchant/register [post]
 func NewMerchant(c *gin.Context) {
-	var merchant models.Merchant
-	if err := c.ShouldBindJSON(&merchant); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		slog.Warn("Invalid request body", "details", err.Error)
+	var req dto.CreateMerchantRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn("Invalid request body", "error", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	if err := merchant.Validate(); len(err) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"errors": err})
-		slog.Warn("Invalid request body", "details", err)
+
+	if err := validate.Struct(req); err != nil {
+		errs := formatValidationErrors(err)
+		slog.Warn("Merchant validation failed", "errors", errs)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errs})
 		return
 	}
-	if err := database.DB.Create(&merchant).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		slog.Error("Failed to create merchant", "details", err.Error)
+
+	merchant, err := services.CreateMerchant(req)
+	if err != nil {
+		slog.Warn("Merchant creation failed", "error", err.Error())
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, merchant)
+
 	slog.Info("Merchant created", "merchant_id", merchant.MerchantID)
+	c.JSON(http.StatusCreated, gin.H{"data": merchant})
 }
 
 // UpdateMerchant godoc
-// @Summary Update a merchant
-// @Description Update a merchant
-// @Tags merchants
-// @Accept json
-// @Produce json
-// @Param merchant body models.Merchant true "Merchant"
-// @Success 200 {object} models.Merchant
-// @Failure 400
-// @Failure 500
-// @router /merchant/update [post]
+//
+//	@Summary		Update a merchant
+//	@Description	Update the authenticated merchant's details
+//	@Tags			Merchants
+//	@Accept			json
+//	@Produce		json
+//	@Param			merchant	body		dto.UpdateMerchantRequest	true	"Updated merchant data"
+//	@Success		200			{object}	dto.MerchantResponse
+//	@Failure		400			{object}	map[string]string
+//	@Failure		401			{object}	map[string]string
+//	@Failure		404			{object}	map[string]string
+//	@Failure		422			{object}	map[string]interface{}
+//	@Router			/merchant/update [put]
 func UpdateMerchant(c *gin.Context) {
-	var merchant models.Merchant
-	if err := c.ShouldBindJSON(&merchant); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		slog.Warn("Invalid request body", "details", err.Error)
+	// ID comes from JWT — never trust client-supplied IDs for ownership
+	merchantID, err := services.ExtractTokenID(c)
+	if err != nil {
+		slog.Warn("Unauthorized update attempt")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	if err := merchant.Validate(); len(err) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"errors": err})
-		slog.Warn("Invalid request body", "details", err)
-		return
-	}
-	if err := database.DB.Save(&merchant).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		slog.Error("Failed to update merchant", "details", err.Error)
-		return
-	}
-	c.JSON(http.StatusOK, merchant)
-	slog.Info("Merchant updated", "merchant_id", merchant.MerchantID)
 
+	var req dto.UpdateMerchantRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn("Invalid request body", "error", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := validate.Struct(req); err != nil {
+		errs := formatValidationErrors(err)
+		slog.Warn("Merchant update validation failed", "errors", errs)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errs})
+		return
+	}
+
+	merchant, err := services.UpdateMerchant(merchantID, req)
+	if err != nil {
+		slog.Warn("Merchant update failed", "merchant_id", merchantID, "error", err.Error())
+		if err.Error() == "merchant not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "merchant not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update merchant"})
+		return
+	}
+
+	slog.Info("Merchant updated", "merchant_id", merchantID)
+	c.JSON(http.StatusOK, gin.H{"data": merchant})
 }

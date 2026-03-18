@@ -1,7 +1,8 @@
+// services/token.go
 package services
 
 import (
-	"net/http"
+	"errors"
 	"os"
 	"time"
 
@@ -9,101 +10,128 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateClientToken(c *gin.Context, userID string) (string, error) {
-	claims := jwt.MapClaims{}
-	claims["authorized"] = true
-	claims["user_id"] = userID
-	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+const (
+	RoleClient          = "client"
+	RoleMerchant        = "merchant"
+	RoleMerchantStaff   = "staff"
+	RoleMerchantAdmin   = "admin"
+	RoleMerchantManager = "manager"
+)
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	tokenString, _ := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
-
-	c.SetSameSite(http.SameSiteLaxMode)
-	return tokenString, nil
+type Claims struct {
+	UserID     string `json:"user_id"`
+	Role       string `json:"role"`
+	MerchantID string `json:"merchant_id,omitempty"`
+	jwt.RegisteredClaims
 }
 
-func ValidateToken(c *gin.Context) error {
+func GenerateToken(userID, role, merchantID string) (string, int64, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", 0, errors.New("JWT_SECRET is not set")
+	}
 
-	tokenString := ExtractToken(c)
+	expiresAt := time.Now().Add(24 * time.Hour)
 
-	_, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, jwt.ErrSignatureInvalid
+	claims := Claims{
+		UserID:     userID,
+		Role:       role,
+		MerchantID: merchantID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "ticketfair",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(secret))
+	if err != nil {
+		return "", 0, errors.New("failed to sign token")
+	}
+
+	return signed, expiresAt.Unix(), nil
+}
+
+// ParseToken is pure logic — no gin, fully testable
+func ParseToken(tokenStr string) (*Claims, error) {
+	if tokenStr == "" {
+		return nil, errors.New("token is empty") // ← was missing
+	}
+
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return nil, errors.New("JWT_SECRET is not set")
+	}
+
+	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
 		}
-		return []byte(os.Getenv("JWT_SECRET")), nil
+		return []byte(secret), nil
 	})
 
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid or expired token")
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil, errors.New("invalid token claims")
+	}
+
+	return claims, nil
+}
+
+// extractBearerToken pulls the raw token string from the Authorization header
+func ExtractBearerToken(c *gin.Context) (string, error) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return "", errors.New("missing authorization header")
+	}
+
+	const prefix = "Bearer "
+	if len(authHeader) <= len(prefix) || authHeader[:len(prefix)] != prefix {
+		return "", errors.New("invalid authorization header format")
+	}
+
+	return authHeader[len(prefix):], nil
+}
+
+// extractClaims is the single internal entry point for parsing claims from a request
+func extractClaims(c *gin.Context) (*Claims, error) {
+	tokenStr, err := ExtractBearerToken(c)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return ParseToken(tokenStr)
 }
 
-func GenerateMerchantToken(c *gin.Context, MerchantRepID, Role string) (string, error) {
-
-	claims := jwt.MapClaims{}
-	claims["authorized"] = true
-	claims["user_id"] = MerchantRepID
-	claims["role"] = Role
-	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	tokenString, _ := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
-
-	c.SetSameSite(http.SameSiteLaxMode)
-	return tokenString, nil
-}
-
-func ExtractToken(c *gin.Context) string {
-
-	token := c.GetHeader("Authorization")
-	if token == "" {
-		return ""
-	}
-	return token[len("Bearer "):] // Remove "Bearer " prefix
-
-}
+// Public helpers — all share a single extractClaims call
 
 func ExtractTokenID(c *gin.Context) (string, error) {
-	tokenString := ExtractToken(c)
-
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, jwt.ErrSignatureInvalid
-		}
-		return []byte(os.Getenv("JWT_SECRET")), nil
-	})
-
+	claims, err := extractClaims(c)
 	if err != nil {
 		return "", err
 	}
-
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		userID := claims["user_id"].(string)
-		return userID, nil
-	}
-	return "", err
+	return claims.UserID, nil
 }
 
-func ExtractRole(c *gin.Context) (string, error) {
-	tokenString := ExtractToken(c)
-
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, jwt.ErrSignatureInvalid
-		}
-		return []byte(os.Getenv("JWT_SECRET")), nil
-	})
-
+func ExtractTokenRole(c *gin.Context) (string, error) {
+	claims, err := extractClaims(c)
 	if err != nil {
 		return "", err
 	}
+	return claims.Role, nil
+}
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		role := claims["role"].(string)
-		return role, nil
+func ExtractMerchantID(c *gin.Context) (string, error) {
+	claims, err := extractClaims(c) // ← fixed: was ExtractClaims (undefined)
+	if err != nil {
+		return "", err
 	}
-	return "", err
+	if claims.MerchantID == "" {
+		return "", errors.New("merchant_id not present in token")
+	}
+	return claims.MerchantID, nil
 }

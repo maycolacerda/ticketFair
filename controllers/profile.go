@@ -1,3 +1,4 @@
+// controllers/profile.go
 package controllers
 
 import (
@@ -5,85 +6,144 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/maycolacerda/ticketfair/database"
-	"github.com/maycolacerda/ticketfair/models"
+	"github.com/maycolacerda/ticketfair/dto"
 	"github.com/maycolacerda/ticketfair/services"
 )
 
-//	 CreateProfile godoc
-//		@Summary		Create a new profile.
-//		@Description	Create a new profile with user ID and other details.
-//		@Tags			Profiles
-//		@Accept			json
-//		@Produce		json
-//		@Param			profile	body	models.Profile	true	"Profile data"
-//		@Success		200	{object}	map[string]string
-//		@Failure		400	{object}	map[string]string
-//		@Router			/private/profile/new [post]
+// CreateProfile godoc
+//
+//	@Summary		Create a user profile
+//	@Description	Create a profile for the authenticated user
+//	@Tags			Profile
+//	@Accept			json
+//	@Produce		json
+//	@Param			profile	body		dto.CreateProfileRequest	true	"Profile data"
+//	@Success		201		{object}	dto.ProfileResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		409		{object}	map[string]string
+//	@Failure		422		{object}	map[string]interface{}
+//	@Router			/private/profile [post]
 func CreateProfile(c *gin.Context) {
-	var profile models.Profile
-	if err := c.ShouldBindJSON(&profile); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
+	userID, err := services.ExtractTokenID(c)
+	if err != nil {
+		slog.Warn("Unauthorized profile creation attempt")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	profile.UserID, _ = services.ExtractTokenID(c)
-	err := profile.Validate()
-	if len(err) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid profile data", "details": err})
+
+	var req dto.CreateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn("Invalid request body", "error", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
-	} else {
-		if err := database.DB.Create(&profile).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create profile"})
-			return
+	}
+
+	if err := validate.Struct(req); err != nil {
+		errs := formatValidationErrors(err)
+		slog.Warn("Profile validation failed", "errors", errs)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errs})
+		return
+	}
+
+	profile, err := services.CreateProfile(userID, req)
+	if err != nil {
+		slog.Warn("Profile creation failed", "user_id", userID, "error", err.Error())
+		switch err.Error() {
+		case "user not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case "profile already exists", "phone number already in use":
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create profile"})
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "Profile created successfully", "profile_id": profile.ProfileID})
+		return
 	}
+
+	slog.Info("Profile created", "profile_id", profile.ProfileID, "user_id", userID)
+	c.JSON(http.StatusCreated, gin.H{"data": profile})
 }
 
 // UpdateProfile godoc
 //
-//	@Summary		Update an existing profile.
-//	@Description	Update an existing profile with new details.
-//	@Tags			Profiles
+//	@Summary		Update a user profile
+//	@Description	Update the authenticated user's profile
+//	@Tags			Profile
 //	@Accept			json
 //	@Produce		json
-//	@Param			profile	body	models.Profile	true	"Profile data"
-//	@Success		200	{object}	map[string]string
-//	@Failure		400	{object}	map[string]string
-//	@Router			/private/profile/update [post]
+//	@Param			profile	body		dto.UpdateProfileRequest	true	"Updated profile data"
+//	@Success		200		{object}	dto.ProfileResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		401		{object}	map[string]string
+//	@Failure		404		{object}	map[string]string
+//	@Failure		422		{object}	map[string]interface{}
+//	@Router			/private/profile [put]
 func UpdateProfile(c *gin.Context) {
-	userID, _ := services.ExtractTokenID(c)
-	var profile models.Profile
-	if err := c.ShouldBindJSON(&profile); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
-		slog.Warn("Invalid request body", "details", err.Error())
+	userID, err := services.ExtractTokenID(c)
+	if err != nil {
+		slog.Warn("Unauthorized profile update attempt")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	if err := profile.Validate(); len(err) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid profile data", "details": err})
-		slog.Warn("Invalid profile data", "details", err)
+	var req dto.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn("Invalid request body", "error", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
-	if err := database.DB.Model(&models.Profile{}).Where("user_id = ?", userID).Updates(profile).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
-		slog.Error("Failed to update profile", "details", err)
+	if err := validate.Struct(req); err != nil {
+		errs := formatValidationErrors(err)
+		slog.Warn("Profile update validation failed", "errors", errs)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errs})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
-	slog.Info("Profile updated", "user_id", userID)
+
+	profile, err := services.UpdateProfile(userID, req)
+	if err != nil {
+		slog.Warn("Profile update failed", "user_id", userID, "error", err.Error())
+		switch err.Error() {
+		case "profile not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case "phone number already in use":
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case "no fields to update":
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update profile"})
+		}
+		return
+	}
+
+	slog.Info("Profile updated", "profile_id", profile.ProfileID, "user_id", userID)
+	c.JSON(http.StatusOK, gin.H{"data": profile})
 }
 
+// GetProfile godoc
+//
+//	@Summary		Get the current user's profile
+//	@Description	Retrieve the authenticated user's profile
+//	@Tags			Profile
+//	@Produce		json
+//	@Success		200	{object}	dto.ProfileResponse
+//	@Failure		401	{object}	map[string]string
+//	@Failure		404	{object}	map[string]string
+//	@Router			/private/profile [get]
 func GetProfile(c *gin.Context) {
-	userID, _ := services.ExtractTokenID(c)
-	var profile models.Profile
-	if err := database.DB.First(&profile, "user_id = ?", userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
-		slog.Warn("Profile not found", "user_id", userID)
+	userID, err := services.ExtractTokenID(c)
+	if err != nil {
+		slog.Warn("Unauthorized profile fetch attempt")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	slog.Info("Profile accessed", "user_id", userID)
-	c.JSON(http.StatusOK, profile)
 
+	profile, err := services.GetProfile(userID)
+	if err != nil {
+		slog.Warn("Profile not found", "user_id", userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "profile not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": profile})
 }

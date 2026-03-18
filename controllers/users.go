@@ -1,116 +1,136 @@
+// controllers/users.go
 package controllers
 
 import (
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/maycolacerda/ticketfair/database"
-	"github.com/maycolacerda/ticketfair/models"
+	"github.com/maycolacerda/ticketfair/dto"
 	"github.com/maycolacerda/ticketfair/services"
 )
 
 // NewUser godoc
 //
-//	@Summary		Create a new user.
-//	@Description	Create a new user with email, password, and username.
-//	@Tags			Users
+//	@Summary		Register a new user
+//	@Description	Create a new user with email, password, and username
+//	@Tags			Auth
 //	@Accept			json
 //	@Produce		json
-//	@Param			user	body	models.User	true	"User data"
-//	@Success		200	{object}	map[string]string
-//	@Failure		400	{object}	map[string]string
-//	@Router			/public/newuser [post]
+//	@Param			user	body		dto.CreateUserRequest	true	"User registration data"
+//	@Success		201		{object}	dto.UserResponse
+//	@Failure		400		{object}	map[string]string
+//	@Failure		409		{object}	map[string]string
+//	@Failure		422		{object}	map[string]interface{}
+//	@Router			/public/auth/register [post]
 func NewUser(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "details": err.Error()})
-		slog.Warn("Invalid request body", "details", err.Error())
-		return
-	}
-	err := user.Validate()
-	if len(err) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user data", "details": err})
-		slog.Warn("Invalid user data", "details", err)
-		return
-	}
-	if err := database.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-		slog.Error("Failed to create user", "details", err)
-		return
-	}
-	slog.Info("User Created", "user_id", user.UserID)
-	c.JSON(http.StatusOK, gin.H{"message": "User created successfully", "user_id": user.UserID})
+	var req dto.CreateUserRequest
 
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn("Invalid request body", "error", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := validate.Struct(req); err != nil {
+		errs := formatValidationErrors(err)
+		slog.Warn("Validation failed", "errors", errs)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errs})
+		return
+	}
+
+	user, err := services.CreateUser(req)
+	if err != nil {
+		slog.Warn("User creation failed", "error", err.Error())
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		return
+	}
+
+	slog.Info("User created", "user_id", user.UserID)
+	c.JSON(http.StatusCreated, gin.H{"data": user})
 }
 
 // GetUsers godoc
 //
-//	@Summary		Get all users.
-//	@Description	Retrieve a list of all users.
-//	@Tags			Profiles
-//	@Accept			json
+//	@Summary		List all users
+//	@Description	Retrieve a paginated list of users
+//	@Tags			Users
 //	@Produce		json
-//	@Success		200	{array}		models.Profile
-//	@Failure		500	{object}	map[string]string
+//	@Param			page	query		int	false	"Page number"	default(1)
+//	@Param			limit	query		int	false	"Page size"		default(20)
+//	@Success		200		{object}	dto.PaginatedUsersResponse
+//	@Failure		500		{object}	map[string]string
 //	@Router			/private/users [get]
 func GetUsers(c *gin.Context) {
-	var profiles []models.Profile
-	database.DB.Find(&profiles)
-	c.JSON(http.StatusOK, profiles)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 20
+	}
+
+	result, err := services.GetAllUsers(page, limit)
+	if err != nil {
+		slog.Error("Failed to fetch users", "error", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // GetUserByID godoc
 //
-//	@Summary		Get a user by ID.
-//	@Description	Retrieve a user by their ID.
-//	@Tags			Profiles
-//	@Accept			json
+//	@Summary		Get a user by ID
+//	@Description	Retrieve a user by their UUID
+//	@Tags			Users
 //	@Produce		json
-//	@Param			id	path	string	true	"User ID"
-//	@Success		200	{object}	models.User
+//	@Param			id	path		string	true	"User UUID"
+//	@Success		200	{object}	dto.UserResponse
+//	@Failure		401	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
-//	@Router			/private/users/:id [get]
+//	@Router			/private/users/{id} [get]
 func GetUserByID(c *gin.Context) {
-	userID, err := services.ExtractTokenID(c)
+	userID := c.Param("id")
+
+	user, err := services.GetUserByID(userID)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		slog.Warn("Unauthorized", "user_id", userID)
-		return
-	}
-	var user models.User
-	if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		slog.Warn("User not found", "user_id", userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
-	c.JSON(http.StatusOK, user)
+
+	c.JSON(http.StatusOK, gin.H{"data": user})
 }
 
 // CurrentUser godoc
 //
-//	@Summary		Get the currently authenticated user.
-//	@Description	Retrieve the details of the currently authenticated user.
-//	@Tags			Profiles
-//	@Accept			json
+//	@Summary		Get the current authenticated user
+//	@Description	Retrieve profile of the currently authenticated user
+//	@Tags			Users
 //	@Produce		json
-//	@Success		200	{object}	models.User
+//	@Success		200	{object}	dto.UserResponse
 //	@Failure		401	{object}	map[string]string
 //	@Failure		404	{object}	map[string]string
 //	@Router			/private/users/me [get]
 func CurrentUser(c *gin.Context) {
 	userID, err := services.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		slog.Warn("Unauthorized", "user_id", userID)
+		slog.Warn("Unauthorized token extraction failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	var userProfile models.Profile
-	if err := database.DB.First(&userProfile, "user_id = ?", userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+	user, err := services.GetUserByID(userID)
+	if err != nil {
 		slog.Warn("User not found", "user_id", userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
-	c.JSON(http.StatusOK, userProfile)
+
+	c.JSON(http.StatusOK, gin.H{"data": user})
 }

@@ -1,39 +1,41 @@
+// main.go
 package main
 
 import (
 	"log/slog"
 
 	"github.com/maycolacerda/ticketfair/database"
+	_ "github.com/maycolacerda/ticketfair/docs"
 	"github.com/maycolacerda/ticketfair/routes"
 	"github.com/maycolacerda/ticketfair/services"
-	_ "github.com/swaggo/files"
-	_ "github.com/swaggo/gin-swagger"
 )
 
-//	@title			Swagger Example API
+//	@title			TicketFair API
 //	@version		1.0
-//	@description	This is a sample server celler server.
-//	@termsOfService	http://swagger.io/terms/
+//	@description	TicketFair event ticketing platform API
 
-//	@contact.name	API Support
-//	@contact.url	http://www.swagger.io/support
-//	@contact.email	support@swagger.io
+//	@contact.name	TicketFair Support
+//	@contact.email	support@ticketfair.com
 
 //	@license.name	Apache 2.0
 //	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
 
-//	@host		localhost:8000
-//	@BasePath	/
+//	@host		ticketfair.localhost
+//	@BasePath	/api/v1
 
-//	@securityDefinitions.basic	BasicAuth
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				JWT Bearer token. Format: "Bearer <token>"
 
-// @externalDocs.description	OpenAPI
-// @externalDocs.url			https://swagger.io/resources/open-api/
 func main() {
+	services.InitLogger()
 
-	services.Log()
+	slog.Info("Starting TicketFair API")
+
 	slog.Info("Initializing database...")
 	database.InitDB()
+
 	slog.Info("Initializing routes...")
 	routes.HandleRequests()
 }

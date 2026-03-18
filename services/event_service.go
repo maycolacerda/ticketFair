@@ -1,0 +1,171 @@
+// services/event_service.go
+package services
+
+import (
+	"errors"
+	"log/slog"
+	"strings"
+	"time"
+
+	"github.com/maycolacerda/ticketfair/database"
+	"github.com/maycolacerda/ticketfair/dto"
+	"github.com/maycolacerda/ticketfair/models"
+)
+
+func CreateEvent(merchantID string, req dto.CreateEventRequest) (*dto.EventResponse, error) {
+	// Confirm merchant exists and is active
+	var merchant models.Merchant
+	if err := database.DB.First(&merchant, "merchant_id = ?", merchantID).Error; err != nil {
+		return nil, errors.New("merchant not found")
+	}
+	if !merchant.Active {
+		return nil, errors.New("merchant account is disabled")
+	}
+
+	// EndTime must be after StartTime
+	if !req.EndTime.After(req.StartTime) {
+		return nil, errors.New("end_time must be after start_time")
+	}
+
+	// StartTime must be in the future
+	if req.StartTime.Before(time.Now()) {
+		return nil, errors.New("start_time must be in the future")
+	}
+
+	event := models.Event{
+		MerchantID:  merchantID,
+		Name:        strings.TrimSpace(req.Name),
+		Description: strings.TrimSpace(req.Description),
+		Location:    strings.TrimSpace(req.Location),
+		StartTime:   req.StartTime,
+		EndTime:     req.EndTime,
+		Capacity:    req.Capacity,
+	}
+
+	if err := database.DB.Create(&event).Error; err != nil {
+		slog.Error("Failed to create event", "merchant_id", merchantID, "error", err.Error())
+		return nil, errors.New("failed to create event")
+	}
+
+	slog.Info("Event created", "event_id", event.EventID, "merchant_id", merchantID)
+	return toEventResponse(&event), nil
+}
+
+func UpdateEvent(merchantID, eventID string, req dto.UpdateEventRequest) (*dto.EventResponse, error) {
+	var event models.Event
+
+	// Scope to merchant — prevents updating another merchant's event
+	if err := database.DB.Where("event_id = ? AND merchant_id = ?", eventID, merchantID).First(&event).Error; err != nil {
+		return nil, errors.New("event not found")
+	}
+
+	updates := map[string]interface{}{}
+
+	if req.Name != "" {
+		updates["name"] = strings.TrimSpace(req.Name)
+	}
+	if req.Description != "" {
+		updates["description"] = strings.TrimSpace(req.Description)
+	}
+	if req.Location != "" {
+		updates["location"] = strings.TrimSpace(req.Location)
+	}
+	if !req.StartTime.IsZero() {
+		if req.StartTime.Before(time.Now()) {
+			return nil, errors.New("start_time must be in the future")
+		}
+		updates["start_time"] = req.StartTime
+	}
+	if !req.EndTime.IsZero() {
+		startTime, _ := updates["start_time"].(time.Time)
+		if startTime.IsZero() {
+			startTime = event.StartTime
+		}
+		if !req.EndTime.After(startTime) {
+			return nil, errors.New("end_time must be after start_time")
+		}
+		updates["end_time"] = req.EndTime
+	}
+	if req.Capacity > 0 {
+		updates["capacity"] = req.Capacity
+	}
+	if req.Active != nil {
+		updates["active"] = *req.Active
+	}
+
+	if len(updates) == 0 {
+		return nil, errors.New("no fields to update")
+	}
+
+	if err := database.DB.Model(&event).Updates(updates).Error; err != nil {
+		slog.Error("Failed to update event", "event_id", eventID, "error", err.Error())
+		return nil, errors.New("failed to update event")
+	}
+
+	// Re-fetch to return fresh data
+	if err := database.DB.First(&event, "event_id = ?", eventID).Error; err != nil {
+		return nil, errors.New("failed to fetch updated event")
+	}
+
+	slog.Info("Event updated", "event_id", eventID, "merchant_id", merchantID)
+	return toEventResponse(&event), nil
+}
+
+func GetEventByID(eventID string) (*dto.EventResponse, error) {
+	var event models.Event
+
+	if err := database.DB.First(&event, "event_id = ?", eventID).Error; err != nil {
+		return nil, errors.New("event not found")
+	}
+
+	return toEventResponse(&event), nil
+}
+
+func GetEvents(page, limit int) (*dto.PaginatedEventsResponse, error) {
+	var events []models.Event
+	var total int64
+
+	offset := (page - 1) * limit
+
+	if err := database.DB.Model(&models.Event{}).
+		Where("active = ? AND start_time > ?", true, time.Now()).
+		Count(&total).Error; err != nil {
+		return nil, errors.New("failed to count events")
+	}
+
+	if err := database.DB.
+		Where("active = ? AND start_time > ?", true, time.Now()).
+		Order("start_time ASC").
+		Offset(offset).
+		Limit(limit).
+		Find(&events).Error; err != nil {
+		return nil, errors.New("failed to fetch events")
+	}
+
+	data := make([]dto.EventResponse, len(events))
+	for i, e := range events {
+		data[i] = *toEventResponse(&e)
+	}
+
+	return &dto.PaginatedEventsResponse{
+		Data:  data,
+		Page:  page,
+		Limit: limit,
+		Total: total,
+	}, nil
+}
+
+func toEventResponse(e *models.Event) *dto.EventResponse {
+	return &dto.EventResponse{
+		EventID:     e.EventID,
+		MerchantID:  e.MerchantID,
+		Name:        e.Name,
+		Description: e.Description,
+		Location:    e.Location,
+		StartTime:   e.StartTime,
+		EndTime:     e.EndTime,
+		Capacity:    e.Capacity,
+		Active:      e.Active,
+		CreatedAt:   e.CreatedAt,
+	}
+}

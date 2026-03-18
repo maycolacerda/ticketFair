@@ -1,3 +1,4 @@
+// services/logger.go
 package services
 
 import (
@@ -5,20 +6,23 @@ import (
 	"os"
 )
 
-func Log() {
-	//remove o timestamp dos logs.
-	removeTime := func(groups []string, a slog.Attr) slog.Attr {
-		if a.Key == slog.TimeKey && len(groups) == 0 {
-			return slog.Attr{}
-		}
-		return a
+func InitLogger() {
+	env := os.Getenv("GIN_MODE")
+
+	var handler slog.Handler
+
+	if env == "release" {
+		// Production — JSON format, parsed by Promtail and indexed in Loki
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		})
+	} else {
+		// Development — human readable, coloured output
+		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		})
 	}
-	jsonHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource:   false,
-		Level:       slog.LevelDebug,
-		ReplaceAttr: removeTime,
-	})
-	logger := slog.New(jsonHandler)
-	slog.SetDefault(logger)
-	slog.Info("Logger Initialized...")
+
+	slog.SetDefault(slog.New(handler))
+	slog.Info("Logger initialized", "mode", env)
 }

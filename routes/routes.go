@@ -1,3 +1,4 @@
+// routes/routes.go
 package routes
 
 import (
@@ -5,53 +6,100 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/maycolacerda/ticketfair/controllers"
-	_ "github.com/maycolacerda/ticketfair/docs" // Import the generated
 	"github.com/maycolacerda/ticketfair/middlewares"
 	"github.com/maycolacerda/ticketfair/services"
-	swaggerFiles "github.com/swaggo/files" // swagger embed files
+	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func HandleRequests() {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DefaultWriter = io.Discard
+
 	r := gin.Default()
+
+	// Base
 	r.GET("/", controllers.GetHome)
 	r.NoRoute(controllers.NotFound)
-
-	public := r.Group("/public")
-	private := r.Group("/private")
-	merchant := r.Group("/merchant")
-
-	//public
-	public.Use(middlewares.PublicMidleware())
-	public.GET("/health", controllers.HealthCheck)
-	public.POST("/register", controllers.NewUser)
-	public.POST("/auth/client/login", services.NewAuthRequestClient)
-	public.POST("/auth/merchant/login", services.NewAuthRequestMerchant)
-	public.POST("/auth/logout", services.Logout)
-	public.POST("/newuser", controllers.NewUser)
-
-	//private
-	private.Use(middlewares.ClientMiddleware())
-	private.GET("/users", controllers.GetUsers)
-	private.GET("/users/:id", controllers.GetUserByID) //temporário. Retirar depois
-	private.GET("/users/me", controllers.CurrentUser)
-	private.POST("/profile/new", controllers.CreateProfile)
-	private.POST("/profile/update", controllers.UpdateProfile)
-	private.POST("/logout", services.Logout)
-
-	//merchant
-	merchant.Use(middlewares.MerchantMiddleware())
-	merchant.POST("/merchant/events/new", controllers.NewEvent)
-	merchant.POST("/merchant/login", services.NewAuthRequestMerchant)
-	merchant.POST("/merchant/update", controllers.UpdateMerchant)
-	merchant.POST("/merchant/rep/new", controllers.NewMerchantRep)
-	merchant.POST("/merchant/events/update", controllers.UpdateEvent)
-	merchant.POST("/merchant/rep/update", controllers.UpdateMerchantRep)
-
-	merchant.POST("/merchant/logout", services.Logout)
-
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	r.Run(":8000") // Listen and serve on localhost:8000
+
+	api := r.Group("/api/v1")
+
+	setupPublicRoutes(api)
+	setupPrivateRoutes(api)
+	setupMerchantRoutes(api)
+
+	r.Run(":8000")
+}
+
+func setupPublicRoutes(rg *gin.RouterGroup) {
+	public := rg.Group("/public")
+	public.Use(middlewares.PublicMiddleware())
+	{
+		public.GET("/health", controllers.HealthCheck)
+
+		auth := public.Group("/auth")
+		{
+			auth.POST("/register", controllers.NewUser)
+			auth.POST("/client/login", controllers.ClientLogin)
+			auth.POST("/merchant/login", controllers.MerchantLogin)
+			auth.POST("/rep/login", controllers.MerchantRepLogin)
+			auth.POST("/logout", controllers.Logout)
+		}
+
+		merchant := public.Group("/merchant")
+		{
+			merchant.POST("/register", controllers.NewMerchant)
+		}
+
+		// Public event browsing — no auth required
+		events := public.Group("/events")
+		{
+			events.GET("/", controllers.GetEvents)
+			events.GET("/:id", controllers.GetEventByID)
+		}
+	}
+}
+
+func setupPrivateRoutes(rg *gin.RouterGroup) {
+	private := rg.Group("/private")
+	private.Use(middlewares.ClientMiddleware())
+	{
+		users := private.Group("/users")
+		{
+			users.GET("/", controllers.GetUsers)
+			users.GET("/me", controllers.CurrentUser)
+			users.GET("/:id", controllers.GetUserByID)
+		}
+
+		profile := private.Group("/profile")
+		{
+			profile.GET("/", controllers.GetProfile) // ← new
+			profile.POST("/", controllers.CreateProfile)
+			profile.PUT("/", controllers.UpdateProfile)
+		}
+
+		private.POST("/logout", controllers.Logout)
+	}
+}
+func setupMerchantRoutes(rg *gin.RouterGroup) {
+	merchant := rg.Group("/merchant")
+	merchant.Use(middlewares.MerchantMiddleware())
+	{
+		merchant.PUT("/update", controllers.UpdateMerchant)
+		merchant.POST("/logout", controllers.Logout)
+
+		events := merchant.Group("/events")
+		{
+			events.POST("/new", controllers.NewEvent)
+			events.PUT("/:id", controllers.UpdateEvent)
+		}
+
+		rep := merchant.Group("/rep")
+		rep.Use(middlewares.MerchantRepMiddleware(services.RoleMerchantAdmin))
+		{
+			rep.POST("/new", controllers.NewMerchantRep)
+			rep.PUT("/:id", controllers.UpdateMerchantRep)
+		}
+	}
 }
