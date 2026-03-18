@@ -1,0 +1,142 @@
+services:
+
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=ticketfair-network"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # ← secure socket mount
+    networks:
+      - ticketfair-network
+    restart: unless-stopped
+
+  ticketfair-app:
+    build: .
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ticketfair.rule=Host(`ticketfair.localhost`)"
+      - "traefik.http.routers.ticketfair.entrypoints=web"
+      - "traefik.http.services.ticketfair.loadbalancer.server.port=8000"
+    networks:
+      - ticketfair-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/public/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    env_file:
+      - .env
+    depends_on:
+      ticketfair-db:
+        condition: service_healthy
+
+  ticketfair-db:
+    image: cockroachdb/cockroach:latest
+    command: start-single-node --insecure
+    restart: unless-stopped
+    volumes:
+      - ticketfair_db-data:/cockroach/cockroach-data
+    ports:
+      - "26257:26257"  # ← SQL port
+      - "8081:8080"    # ← CockroachDB admin UI
+    networks:
+      - ticketfair-network
+    healthcheck:
+      test: ["CMD", "cockroach", "node", "status", "--insecure"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  loki:
+    image: grafana/loki:latest
+    volumes:
+      - ./configs/loki:/etc/loki
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    networks:
+      - ticketfair-network
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - promtail_data:/var/log/promtail
+      - ./configs/promtail:/etc/promtail
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # ← to scrape container logs
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - ticketfair-network
+    depends_on:
+      - loki
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ./configs/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    restart: unless-stopped
+    networks:
+      - ticketfair-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - ticketfair-network
+
+  nodeexporter:
+    image: prom/node-exporter:latest
+    container_name: nodeexporter
+    networks:
+      - ticketfair-network  # ← moved from host to shared network
+    restart: unless-stopped
+
+networks:
+  ticketfair-network:
+    driver: bridge
+
+volumes:
+  ticketfair_db-data:
+    driver: local
+  grafana_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  promtail_data:
+    driver: local
+
+
+#**Access points:**
+
+#API:              http://ticketfair.localhost
+#Swagger:          http://ticketfair.localhost/swagger/index.html
+#Grafana:          http://grafana.localhost
+#CockroachDB UI:   http://localhost:8081
+#Prometheus:       http://localhost:9090
+#Traefik:          http://localhost:8080
