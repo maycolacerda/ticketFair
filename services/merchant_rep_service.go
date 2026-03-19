@@ -2,7 +2,6 @@
 package services
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/maycolacerda/ticketfair/database"
@@ -12,25 +11,22 @@ import (
 )
 
 func CreateMerchantRep(merchantID string, req dto.CreateMerchantRepRequest) (*dto.MerchantRepResponse, error) {
-	// Confirm merchant exists and is active
 	var merchant models.Merchant
 	if err := database.DB.First(&merchant, "merchant_id = ?", merchantID).Error; err != nil {
-		return nil, errors.New("merchant not found")
+		return nil, ErrMerchantNotFound
 	}
 	if !merchant.Active {
-		return nil, errors.New("merchant account is disabled")
+		return nil, ErrMerchantDisabled
 	}
 
-	// Email must be globally unique — used as login identifier
 	var existing models.MerchantRep
 	if err := database.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
-		return nil, errors.New("email already in use")
+		return nil, ErrEmailInUse
 	}
 
-	// Hash password before storing
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, errors.New("failed to process password")
+		return nil, ErrFailedToHash
 	}
 
 	rep := models.MerchantRep{
@@ -39,11 +35,11 @@ func CreateMerchantRep(merchantID string, req dto.CreateMerchantRepRequest) (*dt
 		Email:      strings.ToLower(strings.TrimSpace(req.Email)),
 		Phone:      strings.TrimSpace(req.Phone),
 		Role:       req.Role,
-		Password:   string(hash), // ← was missing
+		Password:   string(hash),
 	}
 
 	if err := database.DB.Create(&rep).Error; err != nil {
-		return nil, errors.New("failed to create merchant representative")
+		return nil, ErrFailedToCreate
 	}
 
 	return toMerchantRepResponse(&rep), nil
@@ -52,9 +48,8 @@ func CreateMerchantRep(merchantID string, req dto.CreateMerchantRepRequest) (*dt
 func UpdateMerchantRep(merchantID, repID string, req dto.UpdateMerchantRepRequest) (*dto.MerchantRepResponse, error) {
 	var rep models.MerchantRep
 
-	// Scope lookup to merchant — prevents updating another merchant's rep
 	if err := database.DB.Where("merchant_rep_id = ? AND merchant_id = ?", repID, merchantID).First(&rep).Error; err != nil {
-		return nil, errors.New("merchant representative not found")
+		return nil, ErrRepNotFound
 	}
 
 	updates := map[string]interface{}{}
@@ -69,16 +64,15 @@ func UpdateMerchantRep(merchantID, repID string, req dto.UpdateMerchantRepReques
 	}
 
 	if len(updates) == 0 {
-		return nil, errors.New("no fields to update")
+		return nil, ErrNoFieldsToUpdate
 	}
 
 	if err := database.DB.Model(&rep).Updates(updates).Error; err != nil {
-		return nil, errors.New("failed to update merchant representative")
+		return nil, ErrFailedToUpdate
 	}
 
-	// Re-fetch to return fresh data — Updates() doesn't refresh the local struct
 	if err := database.DB.First(&rep, "merchant_rep_id = ?", repID).Error; err != nil {
-		return nil, errors.New("failed to fetch updated merchant representative")
+		return nil, ErrFailedToFetch
 	}
 
 	return toMerchantRepResponse(&rep), nil

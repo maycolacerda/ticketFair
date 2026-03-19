@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -38,8 +39,8 @@ func ClientLogin(c *gin.Context) {
 
 	resp, err := services.AuthenticateClient(req)
 	if err != nil {
-		switch err.Error() {
-		case "account is disabled":
+		switch {
+		case errors.Is(err, services.ErrAccountDisabled):
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
@@ -79,8 +80,8 @@ func MerchantLogin(c *gin.Context) {
 
 	resp, err := services.AuthenticateMerchant(req)
 	if err != nil {
-		switch err.Error() {
-		case "account is disabled":
+		switch {
+		case errors.Is(err, services.ErrAccountDisabled): // ← fixed
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
@@ -120,8 +121,9 @@ func MerchantRepLogin(c *gin.Context) {
 
 	resp, err := services.AuthenticateMerchantRep(req)
 	if err != nil {
-		switch err.Error() {
-		case "account is disabled", "merchant account is disabled":
+		switch {
+		case errors.Is(err, services.ErrAccountDisabled), // ← fixed
+			errors.Is(err, services.ErrMerchantDisabled): // ← fixed
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})

@@ -13,23 +13,18 @@ import (
 )
 
 func CreateEvent(merchantID string, req dto.CreateEventRequest) (*dto.EventResponse, error) {
-	// Confirm merchant exists and is active
 	var merchant models.Merchant
 	if err := database.DB.First(&merchant, "merchant_id = ?", merchantID).Error; err != nil {
-		return nil, errors.New("merchant not found")
+		return nil, ErrMerchantNotFound
 	}
 	if !merchant.Active {
-		return nil, errors.New("merchant account is disabled")
+		return nil, ErrMerchantDisabled
 	}
-
-	// EndTime must be after StartTime
 	if !req.EndTime.After(req.StartTime) {
-		return nil, errors.New("end_time must be after start_time")
+		return nil, ErrInvalidTimeRange
 	}
-
-	// StartTime must be in the future
 	if req.StartTime.Before(time.Now()) {
-		return nil, errors.New("start_time must be in the future")
+		return nil, ErrStartTimeInPast
 	}
 
 	event := models.Event{
@@ -43,11 +38,9 @@ func CreateEvent(merchantID string, req dto.CreateEventRequest) (*dto.EventRespo
 	}
 
 	if err := database.DB.Create(&event).Error; err != nil {
-		slog.Error("Failed to create event", "merchant_id", merchantID, "error", err.Error())
-		return nil, errors.New("failed to create event")
+		return nil, ErrFailedToCreate
 	}
 
-	slog.Info("Event created", "event_id", event.EventID, "merchant_id", merchantID)
 	return toEventResponse(&event), nil
 }
 

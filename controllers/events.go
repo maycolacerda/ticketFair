@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -103,13 +104,13 @@ func NewEvent(c *gin.Context) {
 
 	event, err := services.CreateEvent(merchantID, req)
 	if err != nil {
-		slog.Warn("Event creation failed", "merchant_id", merchantID, "error", err.Error())
-		switch err.Error() {
-		case "merchant not found":
+		switch {
+		case errors.Is(err, services.ErrMerchantNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case "merchant account is disabled":
+		case errors.Is(err, services.ErrMerchantDisabled):
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-		case "start_time must be in the future", "end_time must be after start_time":
+		case errors.Is(err, services.ErrInvalidTimeRange),
+			errors.Is(err, services.ErrStartTimeInPast):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create event"})
@@ -167,12 +168,13 @@ func UpdateEvent(c *gin.Context) {
 	event, err := services.UpdateEvent(merchantID, eventID, req)
 	if err != nil {
 		slog.Warn("Event update failed", "event_id", eventID, "error", err.Error())
-		switch err.Error() {
-		case "event not found":
+		switch {
+		case errors.Is(err, services.ErrEventNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case "no fields to update":
+		case errors.Is(err, services.ErrNoFieldsToUpdate):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		case "start_time must be in the future", "end_time must be after start_time":
+		case errors.Is(err, services.ErrInvalidTimeRange),
+			errors.Is(err, services.ErrStartTimeInPast):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update event"})

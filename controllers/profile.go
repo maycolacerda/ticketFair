@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -48,11 +49,11 @@ func CreateProfile(c *gin.Context) {
 
 	profile, err := services.CreateProfile(userID, req)
 	if err != nil {
-		slog.Warn("Profile creation failed", "user_id", userID, "error", err.Error())
-		switch err.Error() {
-		case "user not found":
+		switch {
+		case errors.Is(err, services.ErrUserNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case "profile already exists", "phone number already in use":
+		case errors.Is(err, services.ErrProfileExists),
+			errors.Is(err, services.ErrPhoneInUse):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create profile"})
@@ -103,19 +104,18 @@ func UpdateProfile(c *gin.Context) {
 	profile, err := services.UpdateProfile(userID, req)
 	if err != nil {
 		slog.Warn("Profile update failed", "user_id", userID, "error", err.Error())
-		switch err.Error() {
-		case "profile not found":
+		switch {
+		case errors.Is(err, services.ErrProfileNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case "phone number already in use":
+		case errors.Is(err, services.ErrPhoneInUse):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		case "no fields to update":
+		case errors.Is(err, services.ErrNoFieldsToUpdate):
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update profile"})
 		}
 		return
 	}
-
 	slog.Info("Profile updated", "profile_id", profile.ProfileID, "user_id", userID)
 	c.JSON(http.StatusOK, gin.H{"data": profile})
 }

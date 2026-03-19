@@ -44,6 +44,9 @@ func HealthCheck(c *gin.Context) {
 //	@Success		404	{object}	map[string]string
 //	@Router			/not-found [get]
 func NotFound(c *gin.Context) {
-	c.JSON(http.StatusNotFound, gin.H{"error": "Página não encontrada"})
-	slog.Warn("Page not found", "Path", c.Request.URL.Path, "Method", c.Request.Method)
+	slog.Warn("Route not found",
+		"path", c.Request.URL.Path,
+		"method", c.Request.Method,
+	)
+	c.JSON(http.StatusNotFound, gin.H{"error": "route not found"})
 }

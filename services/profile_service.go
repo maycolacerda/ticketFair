@@ -15,16 +15,16 @@ import (
 func CreateProfile(userID string, req dto.CreateProfileRequest) (*dto.ProfileResponse, error) {
 	var user models.User
 	if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
-		return nil, errors.New("user not found")
+		return nil, ErrUserNotFound
 	}
 
 	var existing models.Profile
 	if err := database.DB.Where("user_id = ?", userID).First(&existing).Error; err == nil {
-		return nil, errors.New("profile already exists")
+		return nil, ErrProfileExists
 	}
 
 	if err := database.DB.Where("phone_number = ?", req.PhoneNumber).First(&existing).Error; err == nil {
-		return nil, errors.New("phone number already in use")
+		return nil, ErrPhoneInUse
 	}
 
 	// Wrap in transaction — profile and address must both succeed or both fail
@@ -80,9 +80,8 @@ func GetProfile(userID string) (*dto.ProfileResponse, error) {
 
 func UpdateProfile(userID string, req dto.UpdateProfileRequest) (*dto.ProfileResponse, error) {
 	var profile models.Profile
-
 	if err := database.DB.Where("user_id = ?", userID).First(&profile).Error; err != nil {
-		return nil, errors.New("profile not found")
+		return nil, ErrProfileNotFound
 	}
 
 	profileUpdates := map[string]interface{}{}
@@ -99,9 +98,8 @@ func UpdateProfile(userID string, req dto.UpdateProfileRequest) (*dto.ProfileRes
 		if err := database.DB.
 			Where("phone_number = ? AND user_id != ?", req.PhoneNumber, userID).
 			First(&existing).Error; err == nil {
-			return nil, errors.New("phone number already in use")
+			return nil, ErrPhoneInUse
 		}
-		profileUpdates["phone_number"] = strings.TrimSpace(req.PhoneNumber)
 	}
 
 	// Check each address field individually instead of comparing struct to ""

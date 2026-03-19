@@ -14,15 +14,15 @@ func CreateUser(req dto.CreateUserRequest) (*dto.UserResponse, error) {
 	var existing models.User
 
 	if err := database.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
-		return nil, errors.New("email already in use")
+		return nil, ErrEmailInUse
 	}
 	if err := database.DB.Where("username = ?", req.Username).First(&existing).Error; err == nil {
-		return nil, errors.New("username already in use")
+		return nil, ErrUsernameInUse
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, errors.New("failed to process password")
+		return nil, ErrFailedToHash
 	}
 
 	user := models.User{
@@ -32,7 +32,7 @@ func CreateUser(req dto.CreateUserRequest) (*dto.UserResponse, error) {
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
-		return nil, errors.New("failed to create user")
+		return nil, ErrFailedToCreate
 	}
 
 	return &dto.UserResponse{
@@ -78,7 +78,7 @@ func GetAllUsers(page, limit int) (*dto.PaginatedUsersResponse, error) {
 func GetUserByID(userID string) (*dto.UserResponse, error) {
 	var user models.User
 	if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
-		return nil, errors.New("user not found")
+		return nil, ErrUserNotFound
 	}
 
 	return &dto.UserResponse{

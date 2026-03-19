@@ -2,7 +2,6 @@
 package services
 
 import (
-	"errors"
 	"log/slog"
 	"strings"
 
@@ -14,40 +13,35 @@ import (
 
 func AuthenticateMerchantRep(req dto.MerchantRepLoginRequest) (*dto.MerchantRepLoginResponse, error) {
 	var rep models.MerchantRep
-
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 
-	if err := database.DB.
-		Preload("Merchant").
-		Where("email = ?", email).
-		First(&rep).Error; err != nil {
+	if err := database.DB.Preload("Merchant").Where("email = ?", email).First(&rep).Error; err != nil {
 		slog.Warn("Merchant rep login failed — email not found", "email", email)
-		return nil, errors.New("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	if !rep.Active {
 		slog.Warn("Merchant rep login failed — account disabled", "rep_id", rep.MerchantRepID)
-		return nil, errors.New("account is disabled")
+		return nil, ErrAccountDisabled
 	}
 
 	if !rep.Merchant.Active {
 		slog.Warn("Merchant rep login failed — merchant disabled", "merchant_id", rep.MerchantID)
-		return nil, errors.New("merchant account is disabled")
+		return nil, ErrMerchantDisabled
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(rep.Password), []byte(req.Password)); err != nil {
 		slog.Warn("Merchant rep login failed — wrong password", "rep_id", rep.MerchantRepID)
-		return nil, errors.New("invalid credentials")
+		return nil, ErrInvalidCredentials
 	}
 
 	token, expiresAt, err := GenerateToken(rep.MerchantRepID, rep.Role, rep.MerchantID)
 	if err != nil {
 		slog.Error("Merchant rep token generation failed", "rep_id", rep.MerchantRepID, "error", err.Error())
-		return nil, errors.New("failed to generate token")
+		return nil, ErrFailedToGenerateToken
 	}
 
-	slog.Info("Merchant rep login successful", "rep_id", rep.MerchantRepID, "role", rep.Role, "merchant_id", rep.MerchantID)
-
+	slog.Info("Merchant rep login successful", "rep_id", rep.MerchantRepID, "role", rep.Role)
 	return &dto.MerchantRepLoginResponse{
 		Token:     token,
 		ExpiresAt: expiresAt,

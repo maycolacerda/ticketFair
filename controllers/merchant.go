@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -90,15 +91,16 @@ func UpdateMerchant(c *gin.Context) {
 
 	merchant, err := services.UpdateMerchant(merchantID, req)
 	if err != nil {
-		slog.Warn("Merchant update failed", "merchant_id", merchantID, "error", err.Error())
-		if err.Error() == "merchant not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": "merchant not found"})
-			return
+		switch {
+		case errors.Is(err, services.ErrMerchantNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case errors.Is(err, services.ErrNoFieldsToUpdate):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update merchant"})
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update merchant"})
 		return
 	}
-
 	slog.Info("Merchant updated", "merchant_id", merchantID)
 	c.JSON(http.StatusOK, gin.H{"data": merchant})
 }

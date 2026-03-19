@@ -13,28 +13,27 @@ import (
 
 func CreateMerchant(req dto.CreateMerchantRequest) (*dto.MerchantResponse, error) {
 	var existing models.Merchant
-
 	email := strings.ToLower(strings.TrimSpace(req.Email))
+
 	if err := database.DB.Where("email = ?", email).First(&existing).Error; err == nil {
-		return nil, errors.New("email already in use")
+		return nil, ErrEmailInUse
 	}
 
-	// Hash password
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, errors.New("failed to process password")
+		return nil, ErrFailedToHash
 	}
 
 	merchant := models.Merchant{
 		Name:        strings.TrimSpace(req.Name),
 		Email:       email,
-		Password:    string(hash), // ← add
+		Password:    string(hash),
 		Phone:       strings.TrimSpace(req.Phone),
 		Description: strings.TrimSpace(req.Description),
 	}
 
 	if err := database.DB.Create(&merchant).Error; err != nil {
-		return nil, errors.New("failed to create merchant")
+		return nil, ErrFailedToCreate
 	}
 
 	return toMerchantResponse(&merchant), nil
@@ -44,10 +43,9 @@ func UpdateMerchant(merchantID string, req dto.UpdateMerchantRequest) (*dto.Merc
 	var merchant models.Merchant
 
 	if err := database.DB.First(&merchant, "merchant_id = ?", merchantID).Error; err != nil {
-		return nil, errors.New("merchant not found")
+		return nil, ErrMerchantNotFound
 	}
 
-	// Only update non-zero fields — never touches email or ID
 	updates := map[string]interface{}{}
 	if req.Name != "" {
 		updates["name"] = strings.TrimSpace(req.Name)
@@ -60,16 +58,19 @@ func UpdateMerchant(merchantID string, req dto.UpdateMerchantRequest) (*dto.Merc
 	}
 
 	if len(updates) == 0 {
-		return nil, errors.New("no fields to update")
+		return nil, ErrNoFieldsToUpdate
 	}
 
 	if err := database.DB.Model(&merchant).Updates(updates).Error; err != nil {
-		return nil, errors.New("failed to update merchant")
+		return nil, ErrFailedToUpdate
+	}
+
+	if err := database.DB.First(&merchant, "merchant_id = ?", merchantID).Error; err != nil {
+		return nil, ErrFailedToFetch
 	}
 
 	return toMerchantResponse(&merchant), nil
 }
-
 func GetMerchantByID(merchantID string) (*dto.MerchantResponse, error) {
 	var merchant models.Merchant
 

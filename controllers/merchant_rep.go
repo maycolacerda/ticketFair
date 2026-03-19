@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -26,7 +27,6 @@ import (
 //	@Failure		422			{object}	map[string]interface{}
 //	@Router			/merchant/rep/new [post]
 func NewMerchantRep(c *gin.Context) {
-	// MerchantID from JWT — rep is scoped to the authenticated merchant
 	merchantID, err := services.ExtractTokenID(c)
 	if err != nil {
 		slog.Warn("Unauthorized merchant rep creation attempt")
@@ -35,7 +35,6 @@ func NewMerchantRep(c *gin.Context) {
 	}
 
 	var req dto.CreateMerchantRepRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		slog.Warn("Invalid request body", "error", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -52,11 +51,13 @@ func NewMerchantRep(c *gin.Context) {
 	rep, err := services.CreateMerchantRep(merchantID, req)
 	if err != nil {
 		slog.Warn("Merchant rep creation failed", "merchant_id", merchantID, "error", err.Error())
-		switch err.Error() {
-		case "merchant not found":
+		switch {
+		case errors.Is(err, services.ErrMerchantNotFound): // ← was err.Error() == "merchant not found"
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case "email already in use for this merchant":
+		case errors.Is(err, services.ErrEmailInUse): // ← was err.Error() == "email already in use for this merchant"
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case errors.Is(err, services.ErrMerchantDisabled):
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create merchant representative"})
 		}
@@ -97,7 +98,6 @@ func UpdateMerchantRep(c *gin.Context) {
 	}
 
 	var req dto.UpdateMerchantRepRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		slog.Warn("Invalid request body", "error", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -114,10 +114,10 @@ func UpdateMerchantRep(c *gin.Context) {
 	rep, err := services.UpdateMerchantRep(merchantID, repID, req)
 	if err != nil {
 		slog.Warn("Merchant rep update failed", "rep_id", repID, "error", err.Error())
-		switch err.Error() {
-		case "merchant representative not found":
+		switch {
+		case errors.Is(err, services.ErrRepNotFound): // ← was err.Error() == "merchant representative not found"
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case "no fields to update":
+		case errors.Is(err, services.ErrNoFieldsToUpdate): // ← was err.Error() == "no fields to update"
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update merchant representative"})

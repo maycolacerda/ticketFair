@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -43,10 +44,15 @@ func NewUser(c *gin.Context) {
 	user, err := services.CreateUser(req)
 	if err != nil {
 		slog.Warn("User creation failed", "error", err.Error())
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		switch {
+		case errors.Is(err, services.ErrEmailInUse),
+			errors.Is(err, services.ErrUsernameInUse):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+		}
 		return
 	}
-
 	slog.Info("User created", "user_id", user.UserID)
 	c.JSON(http.StatusCreated, gin.H{"data": user})
 }
