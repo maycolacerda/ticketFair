@@ -1,101 +1,173 @@
 services:
-
   traefik:
     image: traefik:v3.0
     command:
       - "--api.insecure=true"
+      - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=ticketfair-network"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--entrypoints.web.address=:80"
-    ports:
-      - "80:80"
-      - "8080:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # ← secure socket mount
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8080:8080"
+      - "80:80"
     networks:
       - ticketfair-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   ticketfair-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ticketfair-app:latest
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ticketfair.rule=Host(`ticketfair.localhost`)"
       - "traefik.http.routers.ticketfair.entrypoints=web"
       - "traefik.http.services.ticketfair.loadbalancer.server.port=8000"
+    ports:
+      - "8000:8000"
     networks:
       - ticketfair-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/public/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/api/v1/public/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
     env_file:
       - .env
     depends_on:
       ticketfair-db:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   ticketfair-db:
     image: cockroachdb/cockroach:latest
     command: start-single-node --insecure
+    environment:
+      COCKROACH_DATABASE: ticketfair
     restart: unless-stopped
     volumes:
       - ticketfair_db-data:/cockroach/cockroach-data
     ports:
-      - "26257:26257"  # ← SQL port
-      - "8081:8080"    # ← CockroachDB admin UI
+      - "26257:26257"
+      - "8081:8080"
     networks:
       - ticketfair-network
     healthcheck:
-      test: ["CMD", "cockroach", "node", "status", "--insecure"]
-      interval: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
       timeout: 10s
-      retries: 5
-
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
   loki:
     image: grafana/loki:latest
     volumes:
-      - ./configs/loki:/etc/loki
+      - ./configs/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
     ports:
       - "3100:3100"
     restart: unless-stopped
     command: -config.file=/etc/loki/loki-config.yml
     networks:
       - ticketfair-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   promtail:
     image: grafana/promtail:latest
     volumes:
-      - promtail_data:/var/log/promtail
-      - ./configs/promtail:/etc/promtail
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # ← to scrape container logs
+      - ./configs/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
     command: -config.file=/etc/promtail/promtail-config.yml
     networks:
       - ticketfair-network
     depends_on:
-      - loki
+      loki:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
       - prometheus_data:/prometheus
-      - ./configs/prometheus:/etc/prometheus
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
     restart: unless-stopped
     networks:
       - ticketfair-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
@@ -105,17 +177,39 @@ services:
       - grafana_data:/var/lib/grafana
     restart: unless-stopped
     depends_on:
-      - prometheus
-      - loki
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
     networks:
       - ticketfair-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   nodeexporter:
     image: prom/node-exporter:latest
-    container_name: nodeexporter
     networks:
-      - ticketfair-network  # ← moved from host to shared network
+      - ticketfair-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
 
 networks:
   ticketfair-network:
@@ -128,15 +222,5 @@ volumes:
     driver: local
   prometheus_data:
     driver: local
-  promtail_data:
+  loki_data:
     driver: local
-
-
-#**Access points:**
-
-#API:              http://ticketfair.localhost
-#Swagger:          http://ticketfair.localhost/swagger/index.html
-#Grafana:          http://grafana.localhost
-#CockroachDB UI:   http://localhost:8081
-#Prometheus:       http://localhost:9090
-#Traefik:          http://localhost:8080

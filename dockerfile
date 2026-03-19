@@ -1,35 +1,34 @@
-
-FROM golang:1.25-alpine AS builder
-
-
-RUN apk update && apk upgrade --no-cache
+FROM golang:1.26-alpine3.22 AS builder
 
 WORKDIR /app
-# Copia os arquivos go.mod e go.sum para o diretório de trabalho
+
+RUN apk add --no-cache git
+
 COPY go.mod go.sum ./
 RUN go mod download
 
-
-# Copia o restante dos arquivos do projeto para o diretório de trabalho
 COPY . .
 
-# Compila o aplicativo Go e gera um executável chamado ticketfair
-RUN go build -o ticketfair -ldflags "-s -w" .
+RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+    $(go env GOPATH)/bin/swag init -g main.go
 
-FROM alpine:latest
+RUN CGO_ENABLED=0 GOOS=linux GOFLAGS="-trimpath" go build -ldflags="-w -s" -o ticketfair .
 
-# Define o diretório de trabalho
+FROM alpine:3.21
+
 WORKDIR /app
 
-# Copia o executável compilado do estágio 'builder'
-COPY --from=builder /app/ticketfair .
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser
 
-#instala o curl para o health check
-RUN apk add --no-cache curl
+COPY --from=builder --chown=appuser:appuser /app/ticketfair .
+COPY --from=builder --chown=appuser:appuser /app/docs ./docs
 
-# expoe a porta 8000 para acesso externo
+USER appuser
+
 EXPOSE 8000
 
-# Define o comando padrão a ser executado quando o container iniciar
-CMD ["swag init"]
-ENTRYPOINT ["./ticketfair"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8000/api/v1 || exit 1
+
+CMD ["./ticketfair"]

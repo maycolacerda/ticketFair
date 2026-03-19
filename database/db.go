@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/maycolacerda/ticketfair/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -18,10 +17,9 @@ func InitDB() {
 	dsn := buildDSN()
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-		// CockroachDB uses implicit transactions internally —
-		// this prevents GORM from wrapping every query in a savepoint
-		DisableNestedTransaction: true,
+		Logger:                                   logger.Default.LogMode(logger.Silent),
+		DisableNestedTransaction:                 true,
+		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	if err != nil {
 		slog.Error("Failed to connect to database", "error", err.Error())
@@ -44,7 +42,7 @@ func InitDB() {
 
 	slog.Info("Database connected successfully")
 
-	migrate(db)
+	//migrate(db)
 
 	DB = db
 }
@@ -53,13 +51,7 @@ func buildDSN() string {
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
 	user := os.Getenv("COCKROACH_USER")
-	password := os.Getenv("COCKROACH_PASSWORD")
 	dbname := os.Getenv("COCKROACH_DB")
-	sslmode := os.Getenv("DB_SSLMODE")
-
-	if sslmode == "" {
-		sslmode = "disable" // ← for local Docker; use "require" in production
-	}
 
 	missing := []string{}
 	if host == "" {
@@ -71,9 +63,6 @@ func buildDSN() string {
 	if user == "" {
 		missing = append(missing, "COCKROACH_USER")
 	}
-	if password == "" {
-		missing = append(missing, "COCKROACH_PASSWORD")
-	}
 	if dbname == "" {
 		missing = append(missing, "COCKROACH_DB")
 	}
@@ -84,27 +73,32 @@ func buildDSN() string {
 	}
 
 	return fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, password, dbname, sslmode,
+		"host=%s port=%s user=%s dbname=%s sslmode=disable",
+		host, port, user, dbname,
 	)
 }
 
-func migrate(db *gorm.DB) {
+/*func migrate(db *gorm.DB) {
 	slog.Info("Running migrations...")
 
-	err := db.AutoMigrate(
-		&models.User{},
-		&models.Merchant{},
-		&models.MerchantRep{},
-		&models.Profile{},
-		&models.Address{},
-		&models.Event{},
-		&models.Transaction{},
-	)
-	if err != nil {
-		slog.Error("Migration failed", "error", err.Error())
-		os.Exit(1)
+	// Order matters — parent tables must be created before children
+	models := []interface{}{
+		&models.User{},        // no dependencies
+		&models.Merchant{},    // no dependencies
+		&models.Profile{},     // depends on User
+		&models.Address{},     // depends on Profile
+		&models.MerchantRep{}, // depends on Merchant
+		&models.Event{},       // depends on Merchant
+		&models.Transaction{}, // depends on User and Event
+	}
+
+	for _, model := range models {
+		if err := db.AutoMigrate(model); err != nil {
+			slog.Error("Migration failed", "model", fmt.Sprintf("%T", model), "error", err.Error())
+			os.Exit(1)
+		}
 	}
 
 	slog.Info("Migrations complete")
 }
+*/

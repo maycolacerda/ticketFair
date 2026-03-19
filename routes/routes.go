@@ -74,9 +74,9 @@ func setupPrivateRoutes(rg *gin.RouterGroup) {
 
 		profile := private.Group("/profile")
 		{
-			profile.GET("/", controllers.GetProfile) // ← new
-			profile.POST("/", controllers.CreateProfile)
-			profile.PUT("/", controllers.UpdateProfile)
+			profile.GET("/myprofile", controllers.GetProfile)
+			profile.POST("/new", controllers.CreateProfile)
+			profile.PUT("/update", controllers.UpdateProfile)
 		}
 
 		private.POST("/logout", controllers.Logout)

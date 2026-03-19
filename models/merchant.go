@@ -19,6 +19,4 @@ type Merchant struct {
 	UpdatedAt   time.Time      `json:"updated_at"           gorm:"autoUpdateTime"`
 	DeletedAt   gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
-	Reps   []MerchantRep `json:"reps,omitempty"   gorm:"foreignKey:MerchantID"`
-	Events []Event       `json:"events,omitempty" gorm:"foreignKey:MerchantID"`
 }
