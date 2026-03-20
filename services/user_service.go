@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/maycolacerda/ticketfair/database"
@@ -33,6 +34,16 @@ func CreateUser(req dto.CreateUserRequest) (*dto.UserResponse, error) {
 	if err := database.DB.Create(&user).Error; err != nil {
 		return nil, ErrFailedToCreate
 	}
+
+	// Send welcome email — non-blocking
+	go func() {
+		if err := SendWelcomeEmail(user.Email, user.Username); err != nil {
+			slog.Error("Failed to send welcome email",
+				"user_id", user.UserID,
+				"error", err.Error(),
+			)
+		}
+	}()
 
 	return &dto.UserResponse{
 		UserID:    user.UserID,

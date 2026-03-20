@@ -34,15 +34,45 @@ func PurchaseTicket(userID, eventID string, amount float64) (*dto.TransactionRes
 		}
 	}
 
-	// Create ticket record linked to transaction
-	_, ticketErr := CreateTicket(transactionID, userID, eventID)
+	// Create ticket record
+	ticket, ticketErr := CreateTicket(transactionID, userID, eventID)
 	if ticketErr != nil {
-		// Don't fail the purchase — ticket can be reconciled later
 		slog.Error("Failed to create ticket after purchase",
 			"transaction_id", transactionID,
 			"error", ticketErr.Error(),
 		)
 	}
+
+	// Send confirmation email — non-blocking
+	go func() {
+		var user models.User
+		var event models.Event
+
+		if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
+			return
+		}
+		if err := database.DB.First(&event, "event_id = ?", eventID).Error; err != nil {
+			return
+		}
+
+		ticketID := ""
+		if ticket != nil {
+			ticketID = ticket.TicketID
+		}
+
+		if err := SendPurchaseConfirmationEmail(
+			user.Email,
+			user.Username,
+			event.Name,
+			ticketID,
+			amount,
+		); err != nil {
+			slog.Error("Failed to send purchase confirmation email",
+				"user_id", userID,
+				"error", err.Error(),
+			)
+		}
+	}()
 
 	slog.Info("Purchase completed",
 		"transaction_id", transactionID,

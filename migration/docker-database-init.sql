@@ -111,6 +111,17 @@ CREATE TABLE IF NOT EXISTS tickets (
     CONSTRAINT chk_ticket_status CHECK (status IN ('active', 'used', 'refunded', 'cancelled'))
 );
 
+CREATE TABLE IF NOT EXISTS verifications (
+    verification_id UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID        NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    type            VARCHAR(10) NOT NULL,
+    code            VARCHAR(10) NOT NULL,
+    expires_at      TIMESTAMPTZ NOT NULL,
+    used_at         TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at      TIMESTAMPTZ,
+    CONSTRAINT chk_verification_type CHECK (type IN ('email', 'phone'))
+);
 
 -- ─────────────────────────────────────────────
 -- INDEXES
@@ -131,6 +142,8 @@ CREATE INDEX IF NOT EXISTS idx_tickets_user_id        ON tickets(user_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_event_id       ON tickets(event_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_transaction_id ON tickets(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_status         ON tickets(status);
+CREATE INDEX IF NOT EXISTS idx_verifications_user_id ON verifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_verifications_type    ON verifications(type);
 -- ─────────────────────────────────────────────
 -- FUNCTIONS
 -- ─────────────────────────────────────────────

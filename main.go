@@ -4,6 +4,7 @@ package main
 import (
 	"log/slog"
 
+	configs "github.com/maycolacerda/ticketfair/configs/email"
 	"github.com/maycolacerda/ticketfair/database"
 	_ "github.com/maycolacerda/ticketfair/docs"
 	"github.com/maycolacerda/ticketfair/routes"
@@ -35,6 +36,9 @@ func main() {
 
 	slog.Info("Initializing database...")
 	database.InitDB()
+
+	slog.Info("Initializing email...")
+	configs.InitEmail()
 
 	slog.Info("Initializing routes...")
 	routes.HandleRequests()

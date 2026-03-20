@@ -40,4 +40,12 @@ var (
 	ErrFailedToFetch         = errors.New("failed to fetch record")
 	ErrFailedToHash          = errors.New("failed to process password")
 	ErrFailedToGenerateToken = errors.New("failed to generate token")
+
+	//verification
+	ErrVerificationNotFound = errors.New("verification code not found")
+	ErrVerificationExpired  = errors.New("verification code expired")
+	ErrVerificationUsed     = errors.New("verification code already used")
+	ErrVerificationInvalid  = errors.New("invalid verification code")
+	ErrAlreadyVerified      = errors.New("already verified")
+	ErrProfilePhoneNotFound = errors.New("phone number not found on profile")
 )

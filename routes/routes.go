@@ -91,6 +91,13 @@ func setupPrivateRoutes(rg *gin.RouterGroup) {
 		{
 			transactions.GET("/", controllers.GetMyTransactions)
 		}
+		verify := private.Group("/verify")
+		{
+			verify.POST("/email/send", controllers.SendEmailVerification)
+			verify.POST("/email", controllers.VerifyEmail)
+			verify.POST("/phone/send", controllers.SendPhoneVerification)
+			verify.POST("/phone", controllers.VerifyPhone)
+		}
 
 		private.POST("/logout", controllers.Logout)
 	}
