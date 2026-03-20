@@ -74,9 +74,22 @@ func setupPrivateRoutes(rg *gin.RouterGroup) {
 
 		profile := private.Group("/profile")
 		{
-			profile.GET("/myprofile", controllers.GetProfile)
-			profile.POST("/new", controllers.CreateProfile)
-			profile.PUT("/update", controllers.UpdateProfile)
+			profile.GET("/", controllers.GetProfile)
+			profile.POST("/", controllers.CreateProfile)
+			profile.PUT("/", controllers.UpdateProfile)
+		}
+
+		tickets := private.Group("/tickets")
+		{
+			tickets.GET("/", controllers.GetMyTickets)
+			tickets.GET("/:id", controllers.GetTicketByID)
+			tickets.POST("/purchase", controllers.PurchaseTicket)
+			tickets.POST("/refund", controllers.RefundTicket)
+		}
+
+		transactions := private.Group("/transactions")
+		{
+			transactions.GET("/", controllers.GetMyTransactions)
 		}
 
 		private.POST("/logout", controllers.Logout)

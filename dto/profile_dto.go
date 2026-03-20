@@ -18,13 +18,13 @@ type UpdateProfileRequest struct {
 }
 
 type ProfileResponse struct {
-	ProfileID     string          `json:"profile_id"`
-	UserID        string          `json:"user_id"`
-	FirstName     string          `json:"first_name"`
-	LastName      string          `json:"last_name"`
-	PhoneNumber   string          `json:"phone_number"`
-	VerifiedEmail bool            `json:"verified_email"`
-	VerifiedPhone bool            `json:"verified_phone"`
-	Address       AddressResponse `json:"address"` // ← nested
-	CreatedAt     time.Time       `json:"created_at"`
+	ProfileID     string           `json:"profile_id"`
+	UserID        string           `json:"user_id"`
+	FirstName     string           `json:"first_name"`
+	LastName      string           `json:"last_name"`
+	PhoneNumber   string           `json:"phone_number"`
+	VerifiedEmail bool             `json:"verified_email"`
+	VerifiedPhone bool             `json:"verified_phone"`
+	Address       *AddressResponse `json:"address,omitempty"` // ← nested
+	CreatedAt     time.Time        `json:"created_at"`
 }

@@ -2,7 +2,6 @@
 package services
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/maycolacerda/ticketfair/database"
@@ -75,7 +74,7 @@ func GetMerchantByID(merchantID string) (*dto.MerchantResponse, error) {
 	var merchant models.Merchant
 
 	if err := database.DB.First(&merchant, "merchant_id = ?", merchantID).Error; err != nil {
-		return nil, errors.New("merchant not found")
+		return nil, ErrMerchantNotFound
 	}
 
 	return toMerchantResponse(&merchant), nil

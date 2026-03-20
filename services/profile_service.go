@@ -72,7 +72,7 @@ func GetProfile(userID string) (*dto.ProfileResponse, error) {
 		Preload("Address").
 		Where("user_id = ?", userID).
 		First(&profile).Error; err != nil {
-		return nil, errors.New("profile not found")
+		return nil, ErrProfileNotFound // ← was errors.New("profile not found")
 	}
 
 	return toProfileResponse(&profile), nil
@@ -100,9 +100,9 @@ func UpdateProfile(userID string, req dto.UpdateProfileRequest) (*dto.ProfileRes
 			First(&existing).Error; err == nil {
 			return nil, ErrPhoneInUse
 		}
+		profileUpdates["phone_number"] = strings.TrimSpace(req.PhoneNumber)
 	}
 
-	// Check each address field individually instead of comparing struct to ""
 	if req.Address.Street != "" {
 		addressUpdates["street"] = strings.TrimSpace(req.Address.Street)
 	}
@@ -120,24 +120,22 @@ func UpdateProfile(userID string, req dto.UpdateProfileRequest) (*dto.ProfileRes
 	}
 
 	if len(profileUpdates) == 0 && len(addressUpdates) == 0 {
-		return nil, errors.New("no fields to update")
+		return nil, ErrNoFieldsToUpdate // ← was errors.New("no fields to update")
 	}
 
 	err := database.DB.Transaction(func(tx *gorm.DB) error {
 		if len(profileUpdates) > 0 {
 			if err := tx.Model(&profile).Updates(profileUpdates).Error; err != nil {
-				return errors.New("failed to update profile")
+				return ErrFailedToUpdate // ← was errors.New("failed to update profile")
 			}
 		}
-
 		if len(addressUpdates) > 0 {
 			if err := tx.Model(&models.Address{}).
 				Where("profile_id = ?", profile.ProfileID).
 				Updates(addressUpdates).Error; err != nil {
-				return errors.New("failed to update address")
+				return ErrFailedToUpdate // ← was errors.New("failed to update address")
 			}
 		}
-
 		return nil
 	})
 
@@ -146,12 +144,11 @@ func UpdateProfile(userID string, req dto.UpdateProfileRequest) (*dto.ProfileRes
 		return nil, err
 	}
 
-	// Re-fetch with address preloaded
 	if err := database.DB.
 		Preload("Address").
 		Where("user_id = ?", userID).
 		First(&profile).Error; err != nil {
-		return nil, errors.New("failed to fetch updated profile")
+		return nil, ErrFailedToFetch // ← was errors.New("failed to fetch updated profile")
 	}
 
 	slog.Info("Profile updated", "profile_id", profile.ProfileID, "user_id", userID)
@@ -159,7 +156,7 @@ func UpdateProfile(userID string, req dto.UpdateProfileRequest) (*dto.ProfileRes
 }
 
 func toProfileResponse(p *models.Profile) *dto.ProfileResponse {
-	return &dto.ProfileResponse{
+	resp := &dto.ProfileResponse{
 		ProfileID:     p.ProfileID,
 		UserID:        p.UserID,
 		FirstName:     p.FirstName,
@@ -167,14 +164,7 @@ func toProfileResponse(p *models.Profile) *dto.ProfileResponse {
 		PhoneNumber:   p.PhoneNumber,
 		VerifiedEmail: p.VerifiedEmail,
 		VerifiedPhone: p.VerifiedPhone,
-		Address: dto.AddressResponse{
-			AddressID: p.Address.AddressID,
-			Street:    p.Address.Street,
-			City:      p.Address.City,
-			State:     p.Address.State,
-			Country:   p.Address.Country,
-			ZipCode:   p.Address.ZipCode,
-		},
-		CreatedAt: p.CreatedAt,
+		CreatedAt:     p.CreatedAt,
 	}
+	return resp
 }

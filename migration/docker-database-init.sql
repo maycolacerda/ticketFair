@@ -99,6 +99,18 @@ CREATE TABLE IF NOT EXISTS transactions (
     CONSTRAINT chk_transaction_status CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
     CONSTRAINT chk_transaction_amount CHECK (amount > 0)
 );
+CREATE TABLE IF NOT EXISTS tickets (
+    ticket_id      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID        NOT NULL REFERENCES transactions(transaction_id) ON DELETE RESTRICT,
+    user_id        UUID        NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+    event_id       UUID        NOT NULL REFERENCES events(event_id) ON DELETE RESTRICT,
+    status         VARCHAR(20) NOT NULL DEFAULT 'active',
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at     TIMESTAMPTZ,
+    CONSTRAINT chk_ticket_status CHECK (status IN ('active', 'used', 'refunded', 'cancelled'))
+);
+
 
 -- ─────────────────────────────────────────────
 -- INDEXES
@@ -115,7 +127,10 @@ CREATE INDEX IF NOT EXISTS idx_events_start_time         ON events(start_time);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id      ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_event_id     ON transactions(event_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_status       ON transactions(status);
-
+CREATE INDEX IF NOT EXISTS idx_tickets_user_id        ON tickets(user_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_event_id       ON tickets(event_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_transaction_id ON tickets(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_status         ON tickets(status);
 -- ─────────────────────────────────────────────
 -- FUNCTIONS
 -- ─────────────────────────────────────────────

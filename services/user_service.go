@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/maycolacerda/ticketfair/database"
@@ -49,12 +48,18 @@ func GetAllUsers(page, limit int) (*dto.PaginatedUsersResponse, error) {
 
 	offset := (page - 1) * limit
 
-	if err := database.DB.Model(&models.User{}).Count(&total).Error; err != nil {
-		return nil, errors.New("failed to count users")
+	if err := database.DB.Model(&models.User{}).
+		Where("active = ?", true). // ← add active filter
+		Count(&total).Error; err != nil {
+		return nil, ErrFailedToFetch // ← was errors.New("failed to count users")
 	}
 
-	if err := database.DB.Offset(offset).Limit(limit).Find(&users).Error; err != nil {
-		return nil, errors.New("failed to fetch users")
+	if err := database.DB.
+		Where("active = ?", true). // ← add active filter
+		Offset(offset).
+		Limit(limit).
+		Find(&users).Error; err != nil {
+		return nil, ErrFailedToFetch // ← was errors.New("failed to fetch users")
 	}
 
 	data := make([]dto.UserResponse, len(users))

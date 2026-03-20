@@ -8,11 +8,13 @@ import (
 )
 
 var (
-	hasNumber    = regexp.MustCompile(`[0-9]`)
-	hasUpperCase = regexp.MustCompile(`[A-Z]`)
-	hasLowerCase = regexp.MustCompile(`[a-z]`)
-	hasSymbol    = regexp.MustCompile(`[!@#$%&*]`)
-	hasMinLength = regexp.MustCompile(`.{8,}`)
+	hasNumber        = regexp.MustCompile(`[0-9]`)
+	hasUpperCase     = regexp.MustCompile(`[A-Z]`)
+	hasLowerCase     = regexp.MustCompile(`[a-z]`)
+	hasSymbol        = regexp.MustCompile(`[!@#$%&*]`)
+	hasMinLength     = regexp.MustCompile(`.{8,}`)
+	onlyLettersRegex = regexp.MustCompile(`^[a-zA-Z\s]+$`)
+	onlyNumbersRegex = regexp.MustCompile(`^[0-9]+$`)
 )
 
 // RegisterCustomValidators registers all custom rules on the provided validator instance
@@ -33,9 +35,9 @@ func validatePassword(fl validator.FieldLevel) bool {
 }
 
 func validateOnlyLetters(fl validator.FieldLevel) bool {
-	return regexp.MustCompile(`^[a-zA-Z\s]+$`).MatchString(fl.Field().String())
+	return onlyLettersRegex.MatchString(fl.Field().String())
 }
 
 func validateOnlyNumbers(fl validator.FieldLevel) bool {
-	return regexp.MustCompile(`^[0-9]+$`).MatchString(fl.Field().String())
+	return onlyNumbersRegex.MatchString(fl.Field().String())
 }

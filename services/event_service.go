@@ -2,7 +2,6 @@
 package services
 
 import (
-	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -47,9 +46,8 @@ func CreateEvent(merchantID string, req dto.CreateEventRequest) (*dto.EventRespo
 func UpdateEvent(merchantID, eventID string, req dto.UpdateEventRequest) (*dto.EventResponse, error) {
 	var event models.Event
 
-	// Scope to merchant — prevents updating another merchant's event
 	if err := database.DB.Where("event_id = ? AND merchant_id = ?", eventID, merchantID).First(&event).Error; err != nil {
-		return nil, errors.New("event not found")
+		return nil, ErrEventNotFound
 	}
 
 	updates := map[string]interface{}{}
@@ -65,7 +63,7 @@ func UpdateEvent(merchantID, eventID string, req dto.UpdateEventRequest) (*dto.E
 	}
 	if !req.StartTime.IsZero() {
 		if req.StartTime.Before(time.Now()) {
-			return nil, errors.New("start_time must be in the future")
+			return nil, ErrStartTimeInPast
 		}
 		updates["start_time"] = req.StartTime
 	}
@@ -75,7 +73,7 @@ func UpdateEvent(merchantID, eventID string, req dto.UpdateEventRequest) (*dto.E
 			startTime = event.StartTime
 		}
 		if !req.EndTime.After(startTime) {
-			return nil, errors.New("end_time must be after start_time")
+			return nil, ErrInvalidTimeRange
 		}
 		updates["end_time"] = req.EndTime
 	}
@@ -87,17 +85,16 @@ func UpdateEvent(merchantID, eventID string, req dto.UpdateEventRequest) (*dto.E
 	}
 
 	if len(updates) == 0 {
-		return nil, errors.New("no fields to update")
+		return nil, ErrNoFieldsToUpdate
 	}
 
 	if err := database.DB.Model(&event).Updates(updates).Error; err != nil {
 		slog.Error("Failed to update event", "event_id", eventID, "error", err.Error())
-		return nil, errors.New("failed to update event")
+		return nil, ErrFailedToUpdate
 	}
 
-	// Re-fetch to return fresh data
 	if err := database.DB.First(&event, "event_id = ?", eventID).Error; err != nil {
-		return nil, errors.New("failed to fetch updated event")
+		return nil, ErrFailedToFetch
 	}
 
 	slog.Info("Event updated", "event_id", eventID, "merchant_id", merchantID)
@@ -108,7 +105,7 @@ func GetEventByID(eventID string) (*dto.EventResponse, error) {
 	var event models.Event
 
 	if err := database.DB.First(&event, "event_id = ?", eventID).Error; err != nil {
-		return nil, errors.New("event not found")
+		return nil, ErrEventNotFound
 	}
 
 	return toEventResponse(&event), nil
@@ -123,7 +120,7 @@ func GetEvents(page, limit int) (*dto.PaginatedEventsResponse, error) {
 	if err := database.DB.Model(&models.Event{}).
 		Where("active = ? AND start_time > ?", true, time.Now()).
 		Count(&total).Error; err != nil {
-		return nil, errors.New("failed to count events")
+		return nil, ErrFailedToFetch // ← was errors.New("failed to count events")
 	}
 
 	if err := database.DB.
@@ -132,7 +129,7 @@ func GetEvents(page, limit int) (*dto.PaginatedEventsResponse, error) {
 		Offset(offset).
 		Limit(limit).
 		Find(&events).Error; err != nil {
-		return nil, errors.New("failed to fetch events")
+		return nil, ErrFailedToFetch // ← was errors.New("failed to fetch events")
 	}
 
 	data := make([]dto.EventResponse, len(events))
