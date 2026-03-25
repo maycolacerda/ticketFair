@@ -239,7 +239,7 @@ INSERT INTO admins (
     'd4e5f6a7-b8c9-0123-defa-234567890123',
     'Super Admin',
     'admin@ticketfair.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+    'kP9vL2!Z&mR5*xN9?uW6@bY1_jT4qS',
     true
 ) ON CONFLICT (email) DO NOTHING;
 
@@ -268,11 +268,11 @@ CREATE OR REPLACE FUNCTION create_profile_with_address(
     INSERT INTO addresses (profile_id, street, city, state, country, zip_code)
     SELECT profile_id, p_street, p_city, p_state, p_country, p_zip_code FROM new_profile
     RETURNING address_id 
-  ) -- <--- This parenthesis was missing!
+  ) 
   SELECT profile_id FROM new_profile;
 $$ LANGUAGE SQL;
 
--- 2. Purchase Ticket (Optimized for Distributed SQL)
+
 CREATE OR REPLACE FUNCTION purchase_ticket(
     p_user_id  UUID,
     p_event_id UUID,
