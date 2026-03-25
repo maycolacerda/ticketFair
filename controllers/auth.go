@@ -81,7 +81,7 @@ func MerchantLogin(c *gin.Context) {
 	resp, err := services.AuthenticateMerchant(req)
 	if err != nil {
 		switch {
-		case errors.Is(err, services.ErrAccountDisabled): // ← fixed
+		case errors.Is(err, services.ErrAccountDisabled):
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
@@ -122,8 +122,8 @@ func MerchantRepLogin(c *gin.Context) {
 	resp, err := services.AuthenticateMerchantRep(req)
 	if err != nil {
 		switch {
-		case errors.Is(err, services.ErrAccountDisabled), // ← fixed
-			errors.Is(err, services.ErrMerchantDisabled): // ← fixed
+		case errors.Is(err, services.ErrAccountDisabled),
+			errors.Is(err, services.ErrMerchantDisabled):
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})

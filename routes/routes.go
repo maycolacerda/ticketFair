@@ -28,6 +28,7 @@ func HandleRequests() {
 	setupPublicRoutes(api)
 	setupPrivateRoutes(api)
 	setupMerchantRoutes(api)
+	setupAdminRoutes(api)
 
 	r.Run(":8000")
 }
@@ -52,7 +53,6 @@ func setupPublicRoutes(rg *gin.RouterGroup) {
 			merchant.POST("/register", controllers.NewMerchant)
 		}
 
-		// Public event browsing — no auth required
 		events := public.Group("/events")
 		{
 			events.GET("/", controllers.GetEvents)
@@ -120,6 +120,36 @@ func setupMerchantRoutes(rg *gin.RouterGroup) {
 		{
 			rep.POST("/new", controllers.NewMerchantRep)
 			rep.PUT("/:id", controllers.UpdateMerchantRep)
+		}
+	}
+}
+
+func setupAdminRoutes(rg *gin.RouterGroup) {
+
+	adminPublic := rg.Group("/admin")
+	{
+		adminPublic.POST("/auth/login", controllers.AdminLogin)
+	}
+
+	admin := rg.Group("/admin")
+	admin.Use(middlewares.AdminMiddleware())
+	{
+		users := admin.Group("/users")
+		{
+			users.GET("/", controllers.AdminListUsers)
+			users.POST("/", controllers.AdminCreateUser)
+			users.PUT("/:id", controllers.AdminUpdateUser)
+			users.POST("/:id/deactivate", controllers.AdminDeactivateUser)
+			users.POST("/:id/activate", controllers.AdminActivateUser)
+		}
+
+		merchants := admin.Group("/merchants")
+		{
+			merchants.GET("/", controllers.AdminListMerchants)
+			merchants.POST("/", controllers.AdminCreateMerchant)
+			merchants.PUT("/:id", controllers.AdminUpdateMerchant)
+			merchants.POST("/:id/deactivate", controllers.AdminDeactivateMerchant)
+			merchants.POST("/:id/activate", controllers.AdminActivateMerchant)
 		}
 	}
 }

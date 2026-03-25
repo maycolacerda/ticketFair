@@ -16,6 +16,7 @@ const (
 	RoleMerchantStaff   = "staff"
 	RoleMerchantAdmin   = "admin"
 	RoleMerchantManager = "manager"
+	RoleAdmin           = "superadmin"
 )
 
 type Claims struct {

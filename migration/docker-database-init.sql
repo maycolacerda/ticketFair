@@ -1,5 +1,7 @@
 -- migration/database-init.sql
 
+CREATE DATABASE IF NOT EXISTS ticketfair;
+USE ticketfair;
 -- ─────────────────────────────────────────────
 -- TABLES
 -- ─────────────────────────────────────────────
@@ -7,8 +9,10 @@
 CREATE TABLE IF NOT EXISTS users (
     user_id    UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     email      VARCHAR(100) NOT NULL UNIQUE,
+    CONSTRAINT uni_users_email UNIQUE(email), 
     password   VARCHAR(255) NOT NULL,
-    username   VARCHAR(100) NOT NULL UNIQUE,
+    username   VARCHAR(100) NOT NULL,
+    CONSTRAINT uni_users_username UNIQUE(username),
     active     BOOLEAN      NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
@@ -44,8 +48,9 @@ CREATE TABLE IF NOT EXISTS merchant_reps (
 );
 
 CREATE TABLE IF NOT EXISTS profiles (
-    profile_id     UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id        UUID         NOT NULL UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
+    profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT uni_profiles_user_id UNIQUE(user_id),
     first_name     VARCHAR(100) NOT NULL,
     last_name      VARCHAR(100) NOT NULL,
     phone_number   VARCHAR(20)  NOT NULL UNIQUE,
@@ -123,6 +128,17 @@ CREATE TABLE IF NOT EXISTS verifications (
     CONSTRAINT chk_verification_type CHECK (type IN ('email', 'phone'))
 );
 
+CREATE TABLE IF NOT EXISTS admins (
+    admin_id   UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    name       VARCHAR(100) NOT NULL,
+    email      VARCHAR(100) NOT NULL UNIQUE,
+    password   VARCHAR(255) NOT NULL,
+    active     BOOLEAN      NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    deleted_at TIMESTAMPTZ
+);
+
 -- ─────────────────────────────────────────────
 -- INDEXES
 -- ─────────────────────────────────────────────
@@ -144,101 +160,157 @@ CREATE INDEX IF NOT EXISTS idx_tickets_transaction_id ON tickets(transaction_id)
 CREATE INDEX IF NOT EXISTS idx_tickets_status         ON tickets(status);
 CREATE INDEX IF NOT EXISTS idx_verifications_user_id ON verifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_verifications_type    ON verifications(type);
+CREATE INDEX IF NOT EXISTS idx_admins_deleted_at ON admins(deleted_at);
+
+
+-- ─────────────────────────────────────────────
+-- SEED DATA
+-- password for all accounts is: PassW0rd!
+-- bcrypt hash generated with cost 10
+-- ─────────────────────────────────────────────
+
+INSERT INTO merchants (
+    merchant_id,
+    name,
+    email,
+    password,
+    phone,
+    description,
+    active
+) VALUES (
+    'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    'TicketFair Produções',
+    'contato@ticketfairprod.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 
+    '44999000000',
+    'Produtora oficial de eventos TicketFair.',
+    true
+) ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO merchant_reps (
+    merchant_rep_id,
+    merchant_id,
+    name,
+    email,
+    password,
+    phone,
+    role,
+    active
+) VALUES (
+    'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+    'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    'Carlos Admin',
+    'carlos@ticketfairprod.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 
+    '44999000001',
+    'admin',
+    true
+) ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO events (
+    event_id,
+    merchant_id,
+    name,
+    description,
+    location,
+    start_time,
+    end_time,
+    capacity,
+    active
+) VALUES (
+    'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    'Festival de Verão 2026',
+    'O maior festival de música do Paraná.',
+    'Parque de Exposições de Cianorte — PR',
+    '2026-12-20T18:00:00Z',
+    '2026-12-20T23:59:00Z',
+    1000,
+    true
+) ON CONFLICT DO NOTHING;
+
+INSERT INTO admins (
+    admin_id,
+    name,
+    email,
+    password,
+    active
+) VALUES (
+    'd4e5f6a7-b8c9-0123-defa-234567890123',
+    'Super Admin',
+    'admin@ticketfair.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+    true
+) ON CONFLICT (email) DO NOTHING;
+
+
 -- ─────────────────────────────────────────────
 -- FUNCTIONS
 -- ─────────────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION create_profile_with_address(
-    p_user_id    UUID,
-    p_first_name VARCHAR,
-    p_last_name  VARCHAR,
-    p_phone      VARCHAR,
-    p_street     VARCHAR,
-    p_city       VARCHAR,
-    p_state      VARCHAR,
-    p_country    CHAR(2),
-    p_zip_code   VARCHAR
+    p_user_id     UUID,
+    p_first_name  VARCHAR,
+    p_last_name   VARCHAR,
+    p_phone       VARCHAR,
+    p_street      VARCHAR,
+    p_city        VARCHAR,
+    p_state       VARCHAR,
+    p_country     CHAR(2),
+    p_zip_code    VARCHAR
 ) RETURNS UUID AS $$
-DECLARE
-    v_profile_id UUID;
-BEGIN
+  WITH new_profile AS (
     INSERT INTO profiles (user_id, first_name, last_name, phone_number)
     VALUES (p_user_id, p_first_name, p_last_name, p_phone)
-    RETURNING profile_id INTO v_profile_id;
-
+    RETURNING profile_id
+  ),
+  new_address AS (
     INSERT INTO addresses (profile_id, street, city, state, country, zip_code)
-    VALUES (v_profile_id, p_street, p_city, p_state, p_country, p_zip_code);
+    SELECT profile_id, p_street, p_city, p_state, p_country, p_zip_code FROM new_profile
+    RETURNING address_id 
+  ) -- <--- This parenthesis was missing!
+  SELECT profile_id FROM new_profile;
+$$ LANGUAGE SQL;
 
-    RETURN v_profile_id;
-END;
-$$ LANGUAGE PLpgSQL;
-
+-- 2. Purchase Ticket (Optimized for Distributed SQL)
 CREATE OR REPLACE FUNCTION purchase_ticket(
     p_user_id  UUID,
     p_event_id UUID,
     p_amount   DECIMAL
 ) RETURNS UUID AS $$
-DECLARE
-    v_transaction_id UUID;
-    v_capacity       INT;
-BEGIN
-    SELECT capacity INTO v_capacity
-    FROM events
-    WHERE event_id = p_event_id
-      AND active = true
-      AND deleted_at IS NULL
-    FOR UPDATE;
-
-    IF v_capacity IS NULL THEN
-        RAISE EXCEPTION 'event_not_found';
-    END IF;
-
-    IF v_capacity <= 0 THEN
-        RAISE EXCEPTION 'event_sold_out';
-    END IF;
-
+  WITH updated_event AS (
     UPDATE events
-    SET capacity   = capacity - 1,
-        updated_at = now()
-    WHERE event_id = p_event_id;
+    SET capacity = capacity - 1, updated_at = now()
+    WHERE event_id = p_event_id 
+      AND active = true 
+      AND capacity > 0 
+      AND deleted_at IS NULL
+    RETURNING event_id
+  )
+  INSERT INTO transactions (user_id, event_id, amount, status)
+  SELECT p_user_id, event_id, p_amount, 'completed'
+  FROM updated_event
+  RETURNING transaction_id;
+$$ LANGUAGE SQL;
 
-    INSERT INTO transactions (user_id, event_id, amount, status)
-    VALUES (p_user_id, p_event_id, p_amount, 'completed')
-    RETURNING transaction_id INTO v_transaction_id;
-
-    RETURN v_transaction_id;
-END;
-$$ LANGUAGE PLpgSQL;
 
 CREATE OR REPLACE FUNCTION refund_ticket(
     p_transaction_id UUID
-) RETURNS VOID AS $$
-DECLARE
-    v_event_id UUID;
-    v_status   VARCHAR;
-BEGIN
-    SELECT event_id, status INTO v_event_id, v_status
-    FROM transactions
-    WHERE transaction_id = p_transaction_id
-      AND deleted_at IS NULL
-    FOR UPDATE;
-
-    IF v_event_id IS NULL THEN
-        RAISE EXCEPTION 'transaction_not_found';
-    END IF;
-
-    IF v_status != 'completed' THEN
-        RAISE EXCEPTION 'transaction_not_refundable';
-    END IF;
-
-    UPDATE events
-    SET capacity   = capacity + 1,
-        updated_at = now()
-    WHERE event_id = v_event_id;
-
+) RETURNS UUID AS $$
+  WITH refunded_tx AS (
     UPDATE transactions
-    SET status     = 'refunded',
-        updated_at = now()
-    WHERE transaction_id = p_transaction_id;
-END;
-$$ LANGUAGE PLpgSQL;
+    SET status = 'refunded', updated_at = now()
+    WHERE transaction_id = p_transaction_id 
+      AND status = 'completed'
+      AND deleted_at IS NULL
+    RETURNING event_id, transaction_id
+  ),
+  restore_capacity AS (
+    UPDATE events AS e
+    SET capacity = e.capacity + 1, updated_at = now()
+    FROM refunded_tx AS r
+    WHERE e.event_id = r.event_id
+    RETURNING e.event_id 
+  )
+  SELECT transaction_id FROM refunded_tx;
+$$ LANGUAGE SQL;

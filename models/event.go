@@ -22,5 +22,5 @@ type Event struct {
 	DeletedAt   gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relationships
-	Merchant Merchant `json:"merchant,omitempty" gorm:"foreignKey:MerchantID"`
+	Merchant *Merchant `json:"merchant,omitempty" gorm:"foreignKey:MerchantID"`
 }

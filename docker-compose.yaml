@@ -1,46 +1,9 @@
 services:
-  traefik:
-    image: traefik:v3.0
-    command:
-      - "--api.insecure=true"
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=ticketfair-network"
-      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
-      - "--entrypoints.web.address=:80"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    ports:
-      - "8080:8080"
-      - "80:80"
-    networks:
-      - ticketfair-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 256M
-
   ticketfair-app:
     build:
       context: .
       dockerfile: Dockerfile
     image: ticketfair-app:latest
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.ticketfair.rule=Host(`ticketfair.localhost`)"
-      - "traefik.http.routers.ticketfair.entrypoints=web"
-      - "traefik.http.services.ticketfair.loadbalancer.server.port=8000"
     ports:
       - "8000:8000"
     networks:
@@ -55,8 +18,8 @@ services:
     env_file:
       - .env
     depends_on:
-      ticketfair-db:
-        condition: service_healthy
+      ticketfair-db-init:
+        condition: service_completed_successfully
     deploy:
       resources:
         limits:
@@ -93,6 +56,26 @@ services:
         reservations:
           cpus: "0.5"
           memory: 1G
+
+  ticketfair-db-init:
+    image: cockroachdb/cockroach:latest
+    volumes:
+      - ./migration:/migration
+    networks:
+      - ticketfair-network
+    depends_on:
+      ticketfair-db:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        sleep 5
+        cat /migration/docker-database-init.sql | \
+        /cockroach/cockroach sql \
+          --insecure \
+          --host=ticketfair-db:26257
+    restart: on-failure
+
   loki:
     image: grafana/loki:latest
     volumes:
@@ -168,11 +151,8 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
-      - "traefik.http.routers.grafana.entrypoints=web"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    ports:
+      - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
     restart: unless-stopped

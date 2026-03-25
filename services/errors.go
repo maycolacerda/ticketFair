@@ -48,4 +48,8 @@ var (
 	ErrVerificationInvalid  = errors.New("invalid verification code")
 	ErrAlreadyVerified      = errors.New("already verified")
 	ErrProfilePhoneNotFound = errors.New("phone number not found on profile")
+
+	//admin
+	ErrAdminNotFound = errors.New("admin not found")
+	ErrAdminDisabled = errors.New("admin account is disabled")
 )

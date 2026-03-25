@@ -78,7 +78,8 @@ func buildDSN() string {
 	)
 }
 
-/*func migrate(db *gorm.DB) {
+/*
+func migrate(db *gorm.DB) {
 	slog.Info("Running migrations...")
 
 	// Order matters — parent tables must be created before children
@@ -90,6 +91,7 @@ func buildDSN() string {
 		&models.MerchantRep{}, // depends on Merchant
 		&models.Event{},       // depends on Merchant
 		&models.Transaction{}, // depends on User and Event
+		&models.Admin{},       //admin
 	}
 
 	for _, model := range models {

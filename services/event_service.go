@@ -37,9 +37,11 @@ func CreateEvent(merchantID string, req dto.CreateEventRequest) (*dto.EventRespo
 	}
 
 	if err := database.DB.Create(&event).Error; err != nil {
+		slog.Error("Failed to create event", "merchant_id", merchantID, "error", err.Error())
 		return nil, ErrFailedToCreate
 	}
 
+	slog.Info("Event created", "event_id", event.EventID, "merchant_id", merchantID)
 	return toEventResponse(&event), nil
 }
 
@@ -120,7 +122,7 @@ func GetEvents(page, limit int) (*dto.PaginatedEventsResponse, error) {
 	if err := database.DB.Model(&models.Event{}).
 		Where("active = ? AND start_time > ?", true, time.Now()).
 		Count(&total).Error; err != nil {
-		return nil, ErrFailedToFetch // ← was errors.New("failed to count events")
+		return nil, ErrFailedToFetch
 	}
 
 	if err := database.DB.
@@ -129,7 +131,7 @@ func GetEvents(page, limit int) (*dto.PaginatedEventsResponse, error) {
 		Offset(offset).
 		Limit(limit).
 		Find(&events).Error; err != nil {
-		return nil, ErrFailedToFetch // ← was errors.New("failed to fetch events")
+		return nil, ErrFailedToFetch
 	}
 
 	data := make([]dto.EventResponse, len(events))
