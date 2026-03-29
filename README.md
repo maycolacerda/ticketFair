@@ -63,8 +63,8 @@ TicketFair is a REST API for selling and managing event tickets. The platform su
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                    Caddy                         │
-│         (Reverse Proxy / TLS)                    │
+│                    Caddy                        │
+│         (Reverse Proxy / TLS)                   │
 └──────────┬──────────────────┬───────────────────┘
            │                  │
     ┌──────▼──────┐   ┌───────▼──────┐
