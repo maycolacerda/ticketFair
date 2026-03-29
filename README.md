@@ -451,7 +451,7 @@ Configure o Loki como data source em `http://loki:3100` para visualizar os logs.
 
 ---
 
-## Dashboard Admin
+## Dashboard Admin // Not publicly avaiable yet 
 
 Interface web para gerenciamento da plataforma.
 
