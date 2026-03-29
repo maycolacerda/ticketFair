@@ -18,7 +18,6 @@ func HandleRequests() {
 
 	r := gin.Default()
 
-	// Base
 	r.GET("/", controllers.GetHome)
 	r.NoRoute(controllers.NotFound)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -39,21 +38,40 @@ func setupPublicRoutes(rg *gin.RouterGroup) {
 	{
 		public.GET("/health", controllers.HealthCheck)
 
+		// Auth — strict rate limits on all login/register endpoints
 		auth := public.Group("/auth")
 		{
-			auth.POST("/register", controllers.NewUser)
-			auth.POST("/client/login", controllers.ClientLogin)
-			auth.POST("/merchant/login", controllers.MerchantLogin)
-			auth.POST("/rep/login", controllers.MerchantRepLogin)
+			auth.POST("/register",
+				middlewares.RateLimit(middlewares.RegisterRateLimit),
+				controllers.NewUser,
+			)
+			auth.POST("/client/login",
+				middlewares.RateLimit(middlewares.AuthRateLimit),
+				controllers.ClientLogin,
+			)
+			auth.POST("/merchant/login",
+				middlewares.RateLimit(middlewares.AuthRateLimit),
+				controllers.MerchantLogin,
+			)
+			auth.POST("/rep/login",
+				middlewares.RateLimit(middlewares.AuthRateLimit),
+				controllers.MerchantRepLogin,
+			)
 			auth.POST("/logout", controllers.Logout)
 		}
 
+		// Merchant register — moderate
 		merchant := public.Group("/merchant")
 		{
-			merchant.POST("/register", controllers.NewMerchant)
+			merchant.POST("/register",
+				middlewares.RateLimit(middlewares.RegisterRateLimit),
+				controllers.NewMerchant,
+			)
 		}
 
+		// Public events — relaxed
 		events := public.Group("/events")
+		events.Use(middlewares.RateLimit(middlewares.PublicRateLimit))
 		{
 			events.GET("/", controllers.GetEvents)
 			events.GET("/:id", controllers.GetEventByID)
@@ -79,6 +97,27 @@ func setupPrivateRoutes(rg *gin.RouterGroup) {
 			profile.PUT("/", controllers.UpdateProfile)
 		}
 
+		// Verification — strict: prevent code spam
+		verify := private.Group("/verify")
+		{
+			verify.POST("/email/send",
+				middlewares.RateLimit(middlewares.VerifyRateLimit),
+				controllers.SendEmailVerification,
+			)
+			verify.POST("/email",
+				middlewares.RateLimit(middlewares.VerifyRateLimit),
+				controllers.VerifyEmail,
+			)
+			verify.POST("/phone/send",
+				middlewares.RateLimit(middlewares.VerifyRateLimit),
+				controllers.SendPhoneVerification,
+			)
+			verify.POST("/phone",
+				middlewares.RateLimit(middlewares.VerifyRateLimit),
+				controllers.VerifyPhone,
+			)
+		}
+
 		tickets := private.Group("/tickets")
 		{
 			tickets.GET("/", controllers.GetMyTickets)
@@ -91,17 +130,11 @@ func setupPrivateRoutes(rg *gin.RouterGroup) {
 		{
 			transactions.GET("/", controllers.GetMyTransactions)
 		}
-		verify := private.Group("/verify")
-		{
-			verify.POST("/email/send", controllers.SendEmailVerification)
-			verify.POST("/email", controllers.VerifyEmail)
-			verify.POST("/phone/send", controllers.SendPhoneVerification)
-			verify.POST("/phone", controllers.VerifyPhone)
-		}
 
 		private.POST("/logout", controllers.Logout)
 	}
 }
+
 func setupMerchantRoutes(rg *gin.RouterGroup) {
 	merchant := rg.Group("/merchant")
 	merchant.Use(middlewares.MerchantMiddleware())
@@ -115,6 +148,11 @@ func setupMerchantRoutes(rg *gin.RouterGroup) {
 			events.PUT("/:id", controllers.UpdateEvent)
 		}
 
+		tickets := merchant.Group("/tickets")
+		{
+			tickets.POST("/:id/validate", controllers.ValidateTicket)
+		}
+
 		rep := merchant.Group("/rep")
 		rep.Use(middlewares.MerchantRepMiddleware(services.RoleMerchantAdmin))
 		{
@@ -125,14 +163,17 @@ func setupMerchantRoutes(rg *gin.RouterGroup) {
 }
 
 func setupAdminRoutes(rg *gin.RouterGroup) {
-
 	adminPublic := rg.Group("/admin")
 	{
-		adminPublic.POST("/auth/login", controllers.AdminLogin)
+		adminPublic.POST("/auth/login",
+			middlewares.RateLimit(middlewares.AuthRateLimit),
+			controllers.AdminLogin,
+		)
 	}
 
 	admin := rg.Group("/admin")
 	admin.Use(middlewares.AdminMiddleware())
+	admin.Use(middlewares.RateLimit(middlewares.AdminRateLimit))
 	{
 		users := admin.Group("/users")
 		{

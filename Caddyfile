@@ -1,0 +1,13 @@
+# Caddyfile
+
+ticketfair.localhost {
+  reverse_proxy ticketfair-app:8000
+}
+
+dashboard.localhost {
+  reverse_proxy dashboard:3001
+}
+
+grafana.localhost {
+  reverse_proxy grafana:3000
+}

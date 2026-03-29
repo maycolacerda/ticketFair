@@ -39,7 +39,7 @@ services:
       - ticketfair_db-data:/cockroach/cockroach-data
     ports:
       - "26257:26257"
-      - "8081:8080"
+      - "8080:8080"
     networks:
       - ticketfair-network
     healthcheck:
@@ -75,7 +75,32 @@ services:
           --insecure \
           --host=ticketfair-db:26257
     restart: on-failure
-
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - ticketfair-network  
+  dashboard:
+    build:
+      context: ./dashboard
+    environment:
+      - API_BASE=http://ticketfair-app:8000/api/v1
+    ports:
+      - "3001:3001"           
+    networks:
+      - ticketfair-network
+    restart: unless-stopped
+    depends_on:
+      ticketfair-app:
+        condition: service_healthy
+    
   loki:
     image: grafana/loki:latest
     volumes:
@@ -204,3 +229,9 @@ volumes:
     driver: local
   loki_data:
     driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+
+
