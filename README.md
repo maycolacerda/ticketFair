@@ -451,7 +451,7 @@ Add Loki as a data source at `http://loki:3100` to query logs.
 
 ---
 
-## Admin Dashboard
+## Admin Dashboard (not public avaiable yet)
 
 Web interface for platform management.
 
