@@ -146,6 +146,57 @@ func GetEvents(page, limit int) (*dto.PaginatedEventsResponse, error) {
 		Total: total,
 	}, nil
 }
+func SetEventImage(merchantID, eventID, imageURL string) (*dto.EventResponse, error) {
+	var event models.Event
+
+	if err := database.DB.
+		Where("event_id = ? AND merchant_id = ?", eventID, merchantID).
+		First(&event).Error; err != nil {
+		return nil, ErrEventNotFound
+	}
+
+	// If event already has an image, delete the old one from S3
+	if event.ImageURL != "" {
+		_ = DeleteEventImage(event.ImageURL)
+	}
+
+	if err := database.DB.Model(&event).
+		Update("image_url", imageURL).Error; err != nil {
+		return nil, ErrFailedToUpdate
+	}
+
+	// Re-fetch fresh
+	if err := database.DB.First(&event, "event_id = ?", eventID).Error; err != nil {
+		return nil, ErrFailedToFetch
+	}
+
+	slog.Info("Event image set", "event_id", eventID, "image_url", imageURL)
+	return toEventResponse(&event), nil
+}
+
+// RemoveEventImage deletes the S3 object and clears the DB field
+func RemoveEventImage(merchantID, eventID string) error {
+	var event models.Event
+
+	if err := database.DB.
+		Where("event_id = ? AND merchant_id = ?", eventID, merchantID).
+		First(&event).Error; err != nil {
+		return ErrEventNotFound
+	}
+
+	if event.ImageURL != "" {
+		if err := DeleteEventImage(event.ImageURL); err != nil {
+			slog.Error("Failed to delete S3 object", "url", event.ImageURL)
+		}
+	}
+
+	if err := database.DB.Model(&event).
+		Update("image_url", "").Error; err != nil {
+		return ErrFailedToUpdate
+	}
+
+	return nil
+}
 
 func toEventResponse(e *models.Event) *dto.EventResponse {
 	return &dto.EventResponse{
@@ -154,6 +205,7 @@ func toEventResponse(e *models.Event) *dto.EventResponse {
 		Name:        e.Name,
 		Description: e.Description,
 		Location:    e.Location,
+		ImageURL:    e.ImageURL,
 		StartTime:   e.StartTime,
 		EndTime:     e.EndTime,
 		Capacity:    e.Capacity,

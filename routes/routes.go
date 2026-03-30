@@ -158,6 +158,8 @@ func setupMerchantRoutes(rg *gin.RouterGroup) {
 		{
 			rep.POST("/new", controllers.NewMerchantRep)
 			rep.PUT("/:id", controllers.UpdateMerchantRep)
+			events.POST("/:id/image", controllers.UploadEventImage)
+			events.DELETE("/:id/image", controllers.DeleteEventImageHandler)
 		}
 	}
 }

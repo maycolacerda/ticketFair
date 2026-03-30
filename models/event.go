@@ -13,6 +13,7 @@ type Event struct {
 	Name        string         `json:"name"                 gorm:"not null"`
 	Description string         `json:"description"          gorm:"type:text"`
 	Location    string         `json:"location"             gorm:"not null"`
+	ImageURL    string         `json:"image_url"             gorm:"type:text"`
 	StartTime   time.Time      `json:"start_time"           gorm:"not null"`
 	EndTime     time.Time      `json:"end_time"             gorm:"not null"`
 	Capacity    int            `json:"capacity"             gorm:"not null;default:0"`

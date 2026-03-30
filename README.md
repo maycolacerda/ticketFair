@@ -473,7 +473,7 @@ Password: PassW0rd!
 
 ## Testing
 
-### Run Unit Tests
+### Run Unit Tests (not public avaiable yet)
 
 ```bash
 go test ./...

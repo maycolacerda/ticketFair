@@ -52,4 +52,9 @@ var (
 	//admin
 	ErrAdminNotFound = errors.New("admin not found")
 	ErrAdminDisabled = errors.New("admin account is disabled")
+
+	//s3
+	ErrS3NotConfigured  = errors.New("image storage is not configured")
+	ErrImageTooLarge    = errors.New("image exceeds maximum size of 5MB")
+	ErrInvalidImageType = errors.New("only JPEG, PNG and WebP images are allowed")
 )

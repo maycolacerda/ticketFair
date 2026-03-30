@@ -28,6 +28,7 @@ type EventResponse struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Location    string    `json:"location"`
+	ImageURL    string    `json:"image_url"`
 	StartTime   time.Time `json:"start_time"`
 	EndTime     time.Time `json:"end_time"`
 	Capacity    int       `json:"capacity"`
