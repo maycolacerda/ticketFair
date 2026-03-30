@@ -76,7 +76,13 @@ func setupPublicRoutes(rg *gin.RouterGroup) {
 			events.GET("/", controllers.GetEvents)
 			events.GET("/:id", controllers.GetEventByID)
 		}
+
+		webhooks := public.Group("/webhooks")
+		{
+			webhooks.POST("/stripe", controllers.StripeWebhook)
+		}
 	}
+
 }
 
 func setupPrivateRoutes(rg *gin.RouterGroup) {
@@ -131,6 +137,12 @@ func setupPrivateRoutes(rg *gin.RouterGroup) {
 			transactions.GET("/", controllers.GetMyTransactions)
 		}
 
+		payments := private.Group("/payments")
+		{
+			payments.GET("/", controllers.GetMyPayments)
+			payments.POST("/intent", controllers.CreatePaymentIntent)
+			payments.POST("/:id/refund", controllers.RefundPayment)
+		}
 		private.POST("/logout", controllers.Logout)
 	}
 }

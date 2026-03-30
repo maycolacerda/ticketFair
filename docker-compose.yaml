@@ -87,7 +87,53 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     networks:
-      - ticketfair-network  
+      - ticketfair-network
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - SERVICES=s3
+      - DEFAULT_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+      - HOSTNAME_EXTERNAL=localstack
+      - DEBUG=0
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh
+    networks:
+      - ticketfair-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    command: >
+      listen
+      --api-key ${STRIPE_SECRET_KEY}
+      --device-name ${STRIPE_DEVICE_NAME:-ticketfair-local}
+      --forward-to ticketfair-app:8000/api/v1/public/webhooks/stripe
+      --skip-verify
+    networks:
+      - ticketfair-network
+    environment:
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_DEVICE_NAME=${STRIPE_DEVICE_NAME:-ticketfair-local}
+    depends_on:
+      ticketfair-app:
+        condition: service_healthy
+    restart: unless-stopped  
   dashboard:
     build:
       context: ./dashboard

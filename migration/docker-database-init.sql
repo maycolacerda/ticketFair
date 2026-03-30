@@ -117,6 +117,25 @@ CREATE TABLE IF NOT EXISTS tickets (
     CONSTRAINT chk_ticket_status CHECK (status IN ('active', 'used', 'refunded', 'cancelled'))
 );
 
+CREATE TABLE IF NOT EXISTS payments (
+    payment_id        UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id           UUID          NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+    event_id          UUID          NOT NULL REFERENCES events(event_id) ON DELETE RESTRICT,
+    transaction_id    UUID,         -- set after Stripe payment succeeds
+    stripe_payment_id VARCHAR(255)  NOT NULL UNIQUE,
+    amount            BIGINT        NOT NULL,      -- in cents
+    currency          VARCHAR(10)   NOT NULL DEFAULT 'brl',
+    quantity          INT           NOT NULL DEFAULT 1,
+    status            VARCHAR(20)   NOT NULL DEFAULT 'pending',
+    created_at        TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    deleted_at        TIMESTAMPTZ,
+    CONSTRAINT chk_payment_status CHECK (
+        status IN ('pending', 'succeeded', 'failed', 'canceled', 'refunded')
+    ),
+    CONSTRAINT chk_payment_amount CHECK (amount > 0)
+);
+
 CREATE TABLE IF NOT EXISTS verifications (
     verification_id UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID        NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -162,6 +181,12 @@ CREATE INDEX IF NOT EXISTS idx_tickets_status         ON tickets(status);
 CREATE INDEX IF NOT EXISTS idx_verifications_user_id ON verifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_verifications_type    ON verifications(type);
 CREATE INDEX IF NOT EXISTS idx_admins_deleted_at ON admins(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_payments_user_id           ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_event_id          ON payments(event_id);
+CREATE INDEX IF NOT EXISTS idx_payments_transaction_id    ON payments(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_payments_stripe_payment_id ON payments(stripe_payment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status            ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_deleted_at        ON payments(deleted_at);
 
 
 -- ─────────────────────────────────────────────

@@ -1,6 +1,6 @@
 # 🎟️ TicketFair
 
-**Event ticketing platform built with Go, Gin, GORM, CockroachDB and AWS S3 (LocalStack).**
+**Event ticketing platform built with Go, Gin, GORM, CockroachDB, AWS S3 (LocalStack) and Stripe.**
 
 ---
 
@@ -17,9 +17,9 @@
 - [Rate Limiting](#rate-limiting)
 - [Database](#database)
 - [Image Storage (S3 / LocalStack)](#image-storage-s3--localstack)
+- [Stripe Payments](#stripe-payments)
 - [Observability](#observability)
 - [Admin Dashboard](#admin-dashboard)
-- [User Frontend](#user-frontend)
 - [Testing](#testing)
 - [Seed Data](#seed-data)
 
@@ -29,20 +29,19 @@
 
 TicketFair is a REST API for selling and managing event tickets. The platform supports three user types — **clients**, **merchants** (event producers) and **administrators** — each with their own authentication flow and permissions.
 
-Event images are stored in **AWS S3**, emulated locally via **LocalStack**, so the full cloud storage workflow runs entirely on your machine with no AWS account needed in development.
+Payments are processed through **Stripe**, emulated locally via the **Stripe CLI** Docker container. Event images are stored in **AWS S3**, emulated via **LocalStack**.
 
 ### Key Features
 
 - Registration and authentication for users, merchants and representatives
 - Event creation and management with cover image upload to S3
-- Ticket purchase and refund with atomic capacity control
+- Ticket purchase via Stripe PaymentIntents with webhook-driven fulfillment
+- Full refund flow through Stripe with automatic capacity restoration
 - Ticket validation at event entry
 - Email and phone verification
 - Admin panel with user and merchant management
 - Per-IP rate limiting for brute force protection
 - Structured logging with Loki + Grafana
-- User-facing frontend for browsing events and buying tickets
-- Admin dashboard for platform management
 
 ---
 
@@ -61,6 +60,8 @@ Event images are stored in **AWS S3**, emulated locally via **LocalStack**, so t
 | Reverse Proxy | Caddy |
 | Image Storage | AWS S3 (LocalStack in development) |
 | S3 SDK | aws-sdk-go-v2 |
+| Payments | Stripe (stripe-go/v79) |
+| Stripe local dev | Stripe CLI (Docker container) |
 | Logging | slog + Loki + Promtail |
 | Metrics | Prometheus + Grafana |
 | Containerization | Docker + Docker Compose |
@@ -70,23 +71,26 @@ Event images are stored in **AWS S3**, emulated locally via **LocalStack**, so t
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                        Caddy                             │
-│              (Reverse Proxy / TLS)                       │
-└─────┬──────────────┬───────────────┬────────────────────┘
-      │              │               │
-┌─────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐
-│ TicketFair │ │  Frontend  │ │ Dashboard  │
-│    API     │ │  (users)   │ │  (admin)   │
-│  :8000     │ │  :3002     │ │  :3001     │
-└─────┬──────┘ └────────────┘ └────────────┘
-      │
- ┌────┴────────────┐
- │                 │
- ▼                 ▼
-CockroachDB     LocalStack
- :26257           :4566
-                  (S3)
+┌──────────────────────────────────────────────────────┐
+│                       Caddy                           │
+│              (Reverse Proxy / TLS)                    │
+└──────────────┬──────────────────┬────────────────────┘
+               │                  │
+       ┌───────▼──────┐   ┌───────▼──────┐
+       │  TicketFair  │   │  Dashboard   │
+       │     API      │   │   (admin)    │
+       │   :8000      │   │   :3001      │
+       └───────┬──────┘   └──────────────┘
+               │
+    ┌──────────┼──────────────────┐
+    │          │                  │
+    ▼          ▼                  ▼
+CockroachDB  LocalStack        Stripe
+  :26257      :4566 (S3)    (via CLI :4242)
+                                  ▲
+                         stripe-cli container
+                         (forwards webhooks →
+                          /public/webhooks/stripe)
 
 Observability:
 Promtail → Loki → Grafana
@@ -103,7 +107,7 @@ dto/           Input/output shapes, custom validators
 middlewares/   JWT, roles, rate limiting, logging
 routes/        Route registration
 database/      Connection and migration
-configs/       Email (SMTP) + S3 client
+configs/       Email (SMTP) + S3 client + Stripe init
 ```
 
 ---
@@ -114,30 +118,27 @@ configs/       Email (SMTP) + S3 client
 ticketfair/
 ├── configs/
 │   ├── email.go
-│   ├── s3.go                          ← S3/LocalStack client init
+│   ├── s3.go
+│   ├── stripe.go                      
 │   ├── loki/loki-config.yml
 │   ├── promtail/promtail-config.yml
 │   └── prometheus/prometheus.yml
 ├── controllers/
-│   ├── admin.go
-│   ├── auth.go
-│   ├── base.go
-│   ├── basics.go
-│   ├── events.go
-│   ├── image.go                       ← image upload/delete handlers
-│   ├── merchant.go
-│   ├── merchant_rep.go
-│   ├── profile.go
-│   ├── ticket.go
-│   ├── transaction.go
-│   ├── users.go
-│   └── verification.go
-├── dashboard/                         ← admin SPA
-│   ├── Dockerfile
-│   ├── entrypoint.sh
-│   ├── index.html
-│   └── nginx.conf
-├── frontend/                          ← user-facing SPA
+│   ├── admin_controller.go
+│   ├── auth_controller.go
+│   ├── base_controller.go
+│   ├── basics_controller.go
+│   ├── events_controller.go
+│   ├── image_controller.go
+│   ├── merchant_controller.go
+│   ├── merchant_rep_controller.go
+│   ├── payment_controller.go                     
+│   ├── profile_controller.go
+│   ├── ticket_controller.go
+│   ├── transaction_controller.go
+│   ├── users_controller.go
+│   └── verification_controller.go
+├── dashboard/
 │   ├── Dockerfile
 │   ├── entrypoint.sh
 │   ├── index.html
@@ -148,9 +149,10 @@ ticketfair/
 │   ├── address_dto.go
 │   ├── admin_dto.go
 │   ├── auth_dto.go
-│   ├── event_dto.go                   ← includes image_url field
+│   ├── event_dto.go
 │   ├── merchant_dto.go
 │   ├── merchant_rep_dto.go
+│   ├── payment_dto.go                 
 │   ├── profile_dto.go
 │   ├── ticket_dto.go
 │   ├── transaction_dto.go
@@ -158,30 +160,31 @@ ticketfair/
 │   ├── validators.go
 │   └── verification_dto.go
 ├── middlewares/
-│   ├── admin.go
-│   ├── base.go
-│   ├── client.go
-│   ├── merchant.go
-│   ├── merchant_rep.go
-│   ├── public.go
-│   └── rate_limiter.go
+│   ├── admin_middleware.go
+│   ├── base_middleware.go
+│   ├── client_middleware.go
+│   ├── merchant_middleware.go
+│   ├── merchant_rep_middleware.go
+│   ├── public_middleware.go
+│   └── rate_limiter_middleware.go
 ├── migration/
-│   └── docker-database-init.sql      ← includes image_url column
+│   └── docker-database-init.sql      
 ├── models/
-│   ├── address.go
-│   ├── admin.go
-│   ├── event.go                       ← includes ImageURL field
-│   ├── merchant.go
-│   ├── merchant_rep.go
-│   ├── profile.go
-│   ├── ticket.go
-│   ├── transaction.go
-│   ├── user.go
-│   └── verification.go
+│   ├── address_model.go
+│   ├── admin_model.go
+│   ├── event_model.go
+│   ├── merchant_model.go
+│   ├── merchant_rep_model.go
+│   ├── payment_model.go                     
+│   ├── profile_model.go
+│   ├── ticket_model.go
+│   ├── transaction_model.go
+│   ├── user_model.go
+│   └── verification_model.go
 ├── routes/
 │   └── routes.go
 ├── scripts/
-│   └── localstack-init.sh            ← creates S3 bucket on startup
+│   └── localstack-init.sh
 ├── services/
 │   ├── admin_auth.go
 │   ├── admin_service.go
@@ -194,8 +197,9 @@ ticketfair/
 │   ├── merchant_rep_auth.go
 │   ├── merchant_rep_service.go
 │   ├── merchant_service.go
+│   ├── payment_service.go             
 │   ├── profile_service.go
-│   ├── s3_service.go                 ← upload, delete, presign
+│   ├── s3_service.go
 │   ├── ticket_service.go
 │   ├── token.go
 │   ├── transaction_service.go
@@ -220,6 +224,7 @@ ticketfair/
 
 - Docker
 - Docker Compose
+- A Stripe account (free) — get test keys at https://dashboard.stripe.com/test/apikeys
 
 ### 1. Clone the repository
 
@@ -232,7 +237,13 @@ cd ticketFair
 
 ```bash
 cp .env.example .env
-# Edit .env — at minimum set JWT_SECRET
+```
+
+Edit `.env` and at minimum set:
+
+```bash
+JWT_SECRET=some_long_random_string
+STRIPE_SECRET_KEY=sk_test_xxxx   # from Stripe dashboard
 ```
 
 ### 3. Start the stack
@@ -241,34 +252,38 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Docker Compose will:
+### 4. Get the Stripe webhook secret
 
-1. Start CockroachDB and run `docker-database-init.sql`
-2. Start LocalStack and create the `ticketfair-images` S3 bucket
-3. Start the Go API (waits for DB + LocalStack to be healthy)
-4. Start the user frontend and admin dashboard
-5. Start Caddy, Loki, Promtail, Prometheus and Grafana
-
-### 4. Generate Swagger docs (first time only)
+After the stack starts, the `stripe-cli` container begins forwarding webhooks. Grab the signing secret from its logs:
 
 ```bash
-go install github.com/swaggo/swag/cmd/swag@latest
-swag init -g main.go
-docker compose up --build ticketfair-app
+docker compose logs stripe-cli | grep "webhook signing secret"
+# → Your webhook signing secret is whsec_xxxxxxxxxxxxxxxxxxxxx
+```
+
+Add it to `.env`:
+
+```bash
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx
+```
+
+Then restart the app:
+
+```bash
+docker compose restart ticketfair-app
 ```
 
 ### 5. Access
 
-| Service | Direct URL | Via Caddy |
-|---|---|---|
-| API | http://localhost:8000 | http://ticketfair.localhost |
-| Swagger | http://localhost:8000/swagger/index.html | — |
-| User Frontend | http://localhost:3002 | http://app.localhost |
-| Admin Dashboard | http://localhost:3001 | http://dashboard.localhost |
-| LocalStack / S3 | http://localhost:4566 | — |
-| CockroachDB UI | http://localhost:8081 | — |
-| Grafana | http://localhost:3000 | http://grafana.localhost |
-| Prometheus | http://localhost:9090 | — |
+| Service | URL |
+|---|---|
+| API | http://localhost:8000 |
+| Swagger | http://localhost:8000/swagger/index.html |
+| Admin Dashboard | http://localhost:3001 |
+| LocalStack / S3 | http://localhost:4566 |
+| CockroachDB UI | http://localhost:8081 |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
 
 ---
 
@@ -297,18 +312,16 @@ SMTP_FROM=your@email.com
 SMTP_FROM_NAME=TicketFair
 
 # AWS S3 / LocalStack
-# Development (LocalStack):
 AWS_ENDPOINT_URL=http://localstack:4566
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=test
 AWS_SECRET_ACCESS_KEY=test
 S3_BUCKET=ticketfair-images
 
-# Production (real AWS — remove AWS_ENDPOINT_URL):
-# AWS_REGION=us-east-1
-# AWS_ACCESS_KEY_ID=AKIAxxxxxxxxxxxxxxxxx
-# AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# S3_BUCKET=ticketfair-images-prod
+# Stripe
+STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxx  # from stripe-cli logs
+STRIPE_DEVICE_NAME=ticketfair-local               # optional
 ```
 
 ---
@@ -327,6 +340,7 @@ POST /api/v1/public/auth/logout
 POST /api/v1/public/merchant/register
 GET  /api/v1/public/events
 GET  /api/v1/public/events/:id
+POST /api/v1/public/webhooks/stripe      ← Stripe webhook receiver
 ```
 
 ### 🔒 Private (requires client token)
@@ -344,9 +358,12 @@ POST /api/v1/private/verify/phone/send
 POST /api/v1/private/verify/phone
 GET  /api/v1/private/tickets
 GET  /api/v1/private/tickets/:id
-POST /api/v1/private/tickets/purchase
+POST /api/v1/private/tickets/purchase    ← legacy direct purchase (no Stripe)
 POST /api/v1/private/tickets/refund
 GET  /api/v1/private/transactions
+GET  /api/v1/private/payments            ← list Stripe payments
+POST /api/v1/private/payments/intent     ← create PaymentIntent
+POST /api/v1/private/payments/:id/refund ← refund via Stripe
 POST /api/v1/private/logout
 ```
 
@@ -356,8 +373,8 @@ POST /api/v1/private/logout
 PUT    /api/v1/merchant/update
 POST   /api/v1/merchant/events/new
 PUT    /api/v1/merchant/events/:id
-POST   /api/v1/merchant/events/:id/image    ← upload cover image (multipart)
-DELETE /api/v1/merchant/events/:id/image    ← remove cover image
+POST   /api/v1/merchant/events/:id/image
+DELETE /api/v1/merchant/events/:id/image
 POST   /api/v1/merchant/tickets/:id/validate
 POST   /api/v1/merchant/rep/new
 PUT    /api/v1/merchant/rep/:id
@@ -425,14 +442,6 @@ Per-IP protection using the token bucket algorithm.
 | Public events | 30 req | 10/s | too many requests |
 | Admin | 20 req | 5/s | too many requests |
 
-When the limit is hit:
-
-```
-HTTP 429 Too Many Requests
-Retry-After: 60
-{ "error": "too many login attempts — try again later" }
-```
-
 ---
 
 ## Database
@@ -450,6 +459,7 @@ events           — Events created by merchants (includes image_url)
 transactions     — Ticket purchases
 tickets          — Tickets linked to transactions
 verifications    — Email/phone verification codes
+payments         — Stripe PaymentIntent records
 ```
 
 ### SQL Functions (Atomicity)
@@ -460,44 +470,27 @@ purchase_ticket(...)              -- Decrements capacity + creates transaction a
 refund_ticket(...)                -- Restores capacity + marks transaction as refunded
 ```
 
-### Ticket Lifecycle
+### Payment status lifecycle
 
 ```
-Purchase  →  active
-Validate  →  used
-Refund    →  refunded
+pending → succeeded → refunded
+        ↘ failed
+        ↘ canceled
+```
+
+### Ticket lifecycle
+
+```
+Purchase (via Stripe webhook)  →  active
+Validate at door               →  used
+Refund (via Stripe)            →  refunded
 ```
 
 ---
 
 ## Image Storage (S3 / LocalStack)
 
-Event cover images are stored in AWS S3. In development, [LocalStack](https://localstack.cloud) emulates the S3 service locally — no AWS account or credentials required.
-
-### How it works
-
-```
-Merchant uploads image
-        │
-        ▼
-POST /merchant/events/:id/image
-(multipart/form-data, field: "image")
-        │
-        ▼
-Validation (JPEG/PNG/WebP, max 5MB, real image check)
-        │
-        ▼
-Upload to S3: events/<uuid>.<ext>
-        │
-        ▼
-Save URL to events.image_url in DB
-        │
-        ▼
-URL returned in all EventResponse payloads
-        │
-        ▼
-Frontend renders image from S3 URL
-```
+Event cover images are stored in AWS S3. In development, LocalStack emulates S3 locally.
 
 ### Upload an event image
 
@@ -507,64 +500,142 @@ curl -X POST http://localhost:8000/api/v1/merchant/events/<event_id>/image \
   -F "image=@/path/to/photo.jpg"
 ```
 
-Response:
-
-```json
-{
-  "message": "image uploaded successfully",
-  "image_url": "http://localhost:4566/ticketfair-images/events/abc123.jpg"
-}
-```
-
-### Delete an event image
-
-```bash
-curl -X DELETE http://localhost:8000/api/v1/merchant/events/<event_id>/image \
-  -H "Authorization: Bearer <merchant_token>"
-```
-
 ### Image validation rules
 
 | Rule | Value |
 |---|---|
 | Allowed formats | JPEG, PNG, WebP |
 | Max size | 5 MB |
-| Validation | Real image decode check (not just MIME sniffing) |
-| Key format | `events/<uuid>.<ext>` |
 | Old image | Automatically deleted from S3 when replaced |
 
-### S3 bucket
-
-| Setting | Value |
-|---|---|
-| Bucket name | `ticketfair-images` |
-| Region | `us-east-1` |
-| Access | Public read (images are publicly accessible) |
-| LocalStack endpoint | `http://localhost:4566` |
-
-### LocalStack setup
-
-LocalStack starts automatically via Docker Compose. The `scripts/localstack-init.sh` script runs on startup and creates the bucket with public read access and CORS headers.
-
-To inspect the bucket manually:
+### Inspect the S3 bucket
 
 ```bash
-# List bucket contents
 aws --endpoint-url=http://localhost:4566 s3 ls s3://ticketfair-images/ --recursive
-
-# Upload a test file
-aws --endpoint-url=http://localhost:4566 s3 cp test.jpg s3://ticketfair-images/test.jpg
-
-# Or use awslocal (LocalStack CLI wrapper)
-awslocal s3 ls s3://ticketfair-images/
 ```
 
-### Moving to production (real AWS S3)
+---
 
-1. Remove `AWS_ENDPOINT_URL` from `.env`
-2. Set real `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
-3. Create the bucket in AWS console and set the bucket policy to allow public reads
-4. Optionally put CloudFront in front for CDN caching
+## Stripe Payments
+
+### How it works
+
+```
+Client calls POST /private/payments/intent
+             │
+             ▼
+  Stripe creates PaymentIntent
+  (returns client_secret)
+             │
+             ▼
+  Client confirms payment on their side
+  (using Stripe.js or mobile SDK)
+             │
+             ▼
+  Stripe sends webhook → /public/webhooks/stripe
+  (forwarded by stripe-cli in development)
+             │
+             ▼
+  payment_intent.succeeded handler:
+    ├── calls purchase_ticket() SQL function
+    ├── creates Ticket record
+    ├── updates Payment.status = "succeeded"
+    └── sends confirmation email (async)
+```
+
+### Stripe webhook events handled
+
+| Event | Action |
+|---|---|
+| `payment_intent.succeeded` | Creates transaction + ticket, sends email |
+| `payment_intent.payment_failed` | Marks payment as failed |
+| `payment_intent.canceled` | Marks payment as canceled |
+| `charge.refunded` | Restores capacity, marks ticket as refunded |
+
+### Payment flow (step by step)
+
+**1. Create a PaymentIntent:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/private/payments/intent \
+  -H "Authorization: Bearer <client_token>" \
+  -H "Content-Type: application/json" \
+  -d '{ "event_id": "c3d4e5f6-a7b8-9012-cdef-123456789012", "quantity": 1 }'
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "client_secret":      "pi_xxx_secret_yyy",
+    "payment_intent_id":  "pi_xxxxxxxxxxxxxxxx",
+    "amount":             5000,
+    "currency":           "brl",
+    "event_id":           "c3d4e5f6-...",
+    "event_name":         "Summer Festival 2026",
+    "quantity":           1
+  }
+}
+```
+
+**2. Confirm using Stripe test card** (for API testing — use Stripe CLI or your own client):
+
+```bash
+# Trigger a test payment_intent.succeeded event directly via Stripe CLI
+docker compose exec stripe-cli stripe trigger payment_intent.succeeded
+```
+
+**3. Check payment status:**
+
+```bash
+curl http://localhost:8000/api/v1/private/payments \
+  -H "Authorization: Bearer <client_token>"
+```
+
+**4. Issue a refund:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/private/payments/<payment_id>/refund \
+  -H "Authorization: Bearer <client_token>"
+```
+
+### Stripe test cards
+
+| Card number | Behavior |
+|---|---|
+| `4242 4242 4242 4242` | Payment succeeds |
+| `4000 0000 0000 9995` | Payment declined (insufficient funds) |
+| `4000 0025 0000 3155` | Requires 3D Secure authentication |
+
+Use any future expiry date, any 3-digit CVC and any 5-digit postal code.
+
+### Trigger webhook events manually
+
+```bash
+# Simulate a succeeded payment
+docker compose exec stripe-cli stripe trigger payment_intent.succeeded
+
+# Simulate a failed payment
+docker compose exec stripe-cli stripe trigger payment_intent.payment_failed
+
+# Simulate a refund
+docker compose exec stripe-cli stripe trigger charge.refunded
+
+# Watch live webhook events
+docker compose logs -f stripe-cli
+```
+
+### Moving to production
+
+1. Replace `STRIPE_SECRET_KEY=sk_test_...` with `sk_live_...`
+2. Remove the `stripe-cli` service from `docker-compose.yaml`
+3. Set up a real webhook endpoint in the Stripe dashboard pointing to `https://yourdomain.com/api/v1/public/webhooks/stripe`
+4. Copy the production webhook signing secret into `STRIPE_WEBHOOK_SECRET`
+
+### Idempotency
+
+The webhook handler checks `payment.Status == "succeeded"` before processing. Stripe may deliver the same event more than once — duplicate processing is safe.
 
 ---
 
@@ -576,11 +647,13 @@ In production (`GIN_MODE=release`) all logs are emitted as JSON and collected by
 
 ```json
 {
-  "time":    "2026-03-29T12:00:00Z",
-  "level":   "INFO",
-  "msg":     "Image uploaded",
-  "key":     "events/abc123.jpg",
-  "url":     "http://localhost:4566/ticketfair-images/events/abc123.jpg"
+  "time":       "2026-03-29T12:00:00Z",
+  "level":      "INFO",
+  "msg":        "Payment succeeded — ticket created",
+  "pi_id":      "pi_xxxxxxxxxxxxxxxx",
+  "transaction_id": "uuid",
+  "user_id":    "uuid",
+  "event_id":   "uuid"
 }
 ```
 
@@ -596,7 +669,7 @@ Add Loki as a data source at `http://loki:3100` to query logs.
 
 ---
 
-## Admin Dashboard (not publicly avaiable yet)
+## Admin Dashboard
 
 Web interface for platform management.
 
@@ -609,42 +682,10 @@ Password: PassW0rd!
 ```
 
 **Features:**
-- Overview with real-time statistics (users, merchants, events, capacity)
+- Overview with real-time statistics
 - List, create, activate and deactivate users
 - List, create, activate and deactivate merchants
 - View all active events
-
----
-
-## User Frontend (Not publicly avaiable yet)
-
-Public-facing web application for browsing events and buying tickets.
-
-**URL:** http://localhost:3002
-
-**Features:**
-
-| Feature | Description |
-|---|---|
-| Event listing | Browse all upcoming events with cover images from S3 |
-| Search | Filter events by name, location or description |
-| Event detail | View full details, capacity and buy tickets inline |
-| Authentication | Register and sign in without leaving the page |
-| Ticket purchase | Enter amount and buy a ticket directly |
-| My Tickets | View all purchased tickets and their status |
-| Responsive | Works on mobile, tablet and desktop |
-
-**Design:** Editorial serif aesthetic — warm cream palette, Fraunces display font, Cabinet Grotesk for UI text.
-
-### User flow
-
-```
-1. Browse events on the homepage
-2. Click an event card to open the detail modal
-3. Sign in or register (inline, no page reload)
-4. Enter purchase amount and click "Buy Now"
-5. View purchased tickets under "My Tickets" in the nav
-```
 
 ---
 
@@ -654,19 +695,19 @@ Public-facing web application for browsing events and buying tickets.
 
 ```bash
 go test ./...
-
-# Verbose output
 go test ./... -v
-
-# Specific package
 go test ./controllers/... -v
+```
+
+### Add the Stripe Go SDK
+
+```bash
+go get github.com/stripe/stripe-go/v79
 ```
 
 ### Postman Collection
 
-Import `ticketfair.postman_collection.json` into Postman to test all endpoints with automated tests and pre-configured variables.
-
-**Recommended order:**
+Import `ticketfair.postman_collection.json` and run in this order:
 
 ```
 1.  Admin Login
@@ -676,29 +717,45 @@ Import `ticketfair.postman_collection.json` into Postman to test all endpoints w
 5.  Client Login
 6.  Create Profile
 7.  Send Email Verification → check logs → Verify Email
-8.  Create Event
-9.  Upload Event Image       ← POST /merchant/events/:id/image (multipart)
-10. List Events              ← verify image_url is present
-11. Purchase Ticket
-12. List My Tickets
-13. Validate Ticket (merchant)
-14. Delete Event Image       ← DELETE /merchant/events/:id/image
+8.  Create Event (merchant)
+9.  Upload Event Image
+10. Create PaymentIntent          ← POST /private/payments/intent
+11. Trigger webhook               ← docker compose exec stripe-cli stripe trigger payment_intent.succeeded
+12. List My Payments              ← verify status = succeeded
+13. List My Tickets               ← verify ticket was created
+14. Validate Ticket (merchant)
+15. Refund Payment                ← POST /private/payments/:id/refund
+16. List My Payments              ← verify status = refunded
 ```
 
-### Test image upload with curl
+### Full Stripe test with curl
 
 ```bash
-# 1. Login as merchant
-TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/public/auth/merchant/login \
+# 1. Login
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/public/auth/client/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"contato@ticketfairprod.com","password":"PassW0rd!"}' \
-  | jq -r '.data.token')
+  -d '{"email":"test@example.com","password":"PassW0rd!"}' | jq -r '.data.token')
 
-# 2. Upload image to seeded event
-curl -X POST \
-  http://localhost:8000/api/v1/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/image \
+# 2. Create PaymentIntent
+PI=$(curl -s -X POST http://localhost:8000/api/v1/private/payments/intent \
   -H "Authorization: Bearer $TOKEN" \
-  -F "image=@./my-event.jpg"
+  -H "Content-Type: application/json" \
+  -d '{"event_id":"c3d4e5f6-a7b8-9012-cdef-123456789012","quantity":1}')
+
+echo $PI | jq '.data.payment_intent_id'
+
+# 3. Trigger succeeded webhook
+docker compose exec stripe-cli stripe trigger payment_intent.succeeded
+
+# 4. Check payment status
+curl http://localhost:8000/api/v1/private/payments \
+  -H "Authorization: Bearer $TOKEN" | jq '.data[0].status'
+# → "succeeded"
+
+# 5. Check ticket was created
+curl http://localhost:8000/api/v1/private/tickets \
+  -H "Authorization: Bearer $TOKEN" | jq '.data[0].status'
+# → "active"
 ```
 
 ---
@@ -733,7 +790,7 @@ The database is automatically initialized with test data on first run.
 | Location | Cianorte Exhibition Park — PR, Brazil |
 | Date | Dec 20, 2026 at 6:00 PM UTC |
 | Capacity | 1000 |
-| Image | Upload via `POST /merchant/events/:id/image` after first boot |
+| Ticket Price | R$ 50.00 (5000 cents) |
 | ID | `c3d4e5f6-a7b8-9012-cdef-123456789012` |
 
 ### Admin
@@ -749,14 +806,9 @@ The database is automatically initialized with test data on first run.
 ## Contributing
 
 ```bash
-# 1. Create a branch
 git checkout -b feature/my-feature
-
-# 2. Make your changes and commit
 git add .
 git commit -m "feat: description of the feature"
-
-# 3. Push and open a PR
 git push origin feature/my-feature
 ```
 
