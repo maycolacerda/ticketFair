@@ -3,5 +3,6 @@ users.txt
 todo.md
 ./graphql
 ./dashboard
+./frontend
 *.exe
 notes.txt

@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS events (
     name        VARCHAR(100) NOT NULL,
     description TEXT,
     location    VARCHAR(255) NOT NULL,
+    image_url   TEXT,
     start_time  TIMESTAMPTZ  NOT NULL,
     end_time    TIMESTAMPTZ  NOT NULL,
     capacity    INT          NOT NULL DEFAULT 0,

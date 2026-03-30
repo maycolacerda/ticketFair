@@ -1,6 +1,6 @@
 # 🎟️ TicketFair
 
-**Event ticketing platform built with Go, Gin, GORM and CockroachDB.**
+**Event ticketing platform built with Go, Gin, GORM, CockroachDB and AWS S3 (LocalStack).**
 
 ---
 
@@ -16,8 +16,10 @@
 - [Authentication](#authentication)
 - [Rate Limiting](#rate-limiting)
 - [Database](#database)
+- [Image Storage (S3 / LocalStack)](#image-storage-s3--localstack)
 - [Observability](#observability)
 - [Admin Dashboard](#admin-dashboard)
+- [User Frontend](#user-frontend)
 - [Testing](#testing)
 - [Seed Data](#seed-data)
 
@@ -27,16 +29,20 @@
 
 TicketFair is a REST API for selling and managing event tickets. The platform supports three user types — **clients**, **merchants** (event producers) and **administrators** — each with their own authentication flow and permissions.
 
+Event images are stored in **AWS S3**, emulated locally via **LocalStack**, so the full cloud storage workflow runs entirely on your machine with no AWS account needed in development.
+
 ### Key Features
 
 - Registration and authentication for users, merchants and representatives
-- Event creation and management
+- Event creation and management with cover image upload to S3
 - Ticket purchase and refund with atomic capacity control
 - Ticket validation at event entry
 - Email and phone verification
 - Admin panel with user and merchant management
 - Per-IP rate limiting for brute force protection
 - Structured logging with Loki + Grafana
+- User-facing frontend for browsing events and buying tickets
+- Admin dashboard for platform management
 
 ---
 
@@ -53,6 +59,8 @@ TicketFair is a REST API for selling and managing event tickets. The platform su
 | Validation | go-playground/validator v10 |
 | Documentation | Swagger (swaggo) |
 | Reverse Proxy | Caddy |
+| Image Storage | AWS S3 (LocalStack in development) |
+| S3 SDK | aws-sdk-go-v2 |
 | Logging | slog + Loki + Promtail |
 | Metrics | Prometheus + Grafana |
 | Containerization | Docker + Docker Compose |
@@ -62,21 +70,23 @@ TicketFair is a REST API for selling and managing event tickets. The platform su
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│                    Caddy                        │
-│         (Reverse Proxy / TLS)                   │
-└──────────┬──────────────────┬───────────────────┘
-           │                  │
-    ┌──────▼──────┐   ┌───────▼──────┐
-    │  TicketFair │   │  Dashboard   │
-    │     API     │   │    Admin     │
-    │  :8000      │   │   :3001      │
-    └──────┬──────┘   └──────────────┘
-           │
-    ┌──────▼──────┐
-    │ CockroachDB │
-    │   :26257    │
-    └─────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                        Caddy                             │
+│              (Reverse Proxy / TLS)                       │
+└─────┬──────────────┬───────────────┬────────────────────┘
+      │              │               │
+┌─────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐
+│ TicketFair │ │  Frontend  │ │ Dashboard  │
+│    API     │ │  (users)   │ │  (admin)   │
+│  :8000     │ │  :3002     │ │  :3001     │
+└─────┬──────┘ └────────────┘ └────────────┘
+      │
+ ┌────┴────────────┐
+ │                 │
+ ▼                 ▼
+CockroachDB     LocalStack
+ :26257           :4566
+                  (S3)
 
 Observability:
 Promtail → Loki → Grafana
@@ -93,7 +103,7 @@ dto/           Input/output shapes, custom validators
 middlewares/   JWT, roles, rate limiting, logging
 routes/        Route registration
 database/      Connection and migration
-configs/       Email (SMTP)
+configs/       Email (SMTP) + S3 client
 ```
 
 ---
@@ -104,6 +114,7 @@ configs/       Email (SMTP)
 ticketfair/
 ├── configs/
 │   ├── email.go
+│   ├── s3.go                          ← S3/LocalStack client init
 │   ├── loki/loki-config.yml
 │   ├── promtail/promtail-config.yml
 │   └── prometheus/prometheus.yml
@@ -113,6 +124,7 @@ ticketfair/
 │   ├── base.go
 │   ├── basics.go
 │   ├── events.go
+│   ├── image.go                       ← image upload/delete handlers
 │   ├── merchant.go
 │   ├── merchant_rep.go
 │   ├── profile.go
@@ -120,7 +132,12 @@ ticketfair/
 │   ├── transaction.go
 │   ├── users.go
 │   └── verification.go
-├── dashboard/
+├── dashboard/                         ← admin SPA
+│   ├── Dockerfile
+│   ├── entrypoint.sh
+│   ├── index.html
+│   └── nginx.conf
+├── frontend/                          ← user-facing SPA
 │   ├── Dockerfile
 │   ├── entrypoint.sh
 │   ├── index.html
@@ -131,7 +148,7 @@ ticketfair/
 │   ├── address_dto.go
 │   ├── admin_dto.go
 │   ├── auth_dto.go
-│   ├── event_dto.go
+│   ├── event_dto.go                   ← includes image_url field
 │   ├── merchant_dto.go
 │   ├── merchant_rep_dto.go
 │   ├── profile_dto.go
@@ -149,11 +166,11 @@ ticketfair/
 │   ├── public.go
 │   └── rate_limiter.go
 ├── migration/
-│   └── docker-database-init.sql
+│   └── docker-database-init.sql      ← includes image_url column
 ├── models/
 │   ├── address.go
 │   ├── admin.go
-│   ├── event.go
+│   ├── event.go                       ← includes ImageURL field
 │   ├── merchant.go
 │   ├── merchant_rep.go
 │   ├── profile.go
@@ -163,6 +180,8 @@ ticketfair/
 │   └── verification.go
 ├── routes/
 │   └── routes.go
+├── scripts/
+│   └── localstack-init.sh            ← creates S3 bucket on startup
 ├── services/
 │   ├── admin_auth.go
 │   ├── admin_service.go
@@ -176,6 +195,7 @@ ticketfair/
 │   ├── merchant_rep_service.go
 │   ├── merchant_service.go
 │   ├── profile_service.go
+│   ├── s3_service.go                 ← upload, delete, presign
 │   ├── ticket_service.go
 │   ├── token.go
 │   ├── transaction_service.go
@@ -212,7 +232,7 @@ cd ticketFair
 
 ```bash
 cp .env.example .env
-# Edit .env with your values
+# Edit .env — at minimum set JWT_SECRET
 ```
 
 ### 3. Start the stack
@@ -220,6 +240,14 @@ cp .env.example .env
 ```bash
 docker compose up --build
 ```
+
+Docker Compose will:
+
+1. Start CockroachDB and run `docker-database-init.sql`
+2. Start LocalStack and create the `ticketfair-images` S3 bucket
+3. Start the Go API (waits for DB + LocalStack to be healthy)
+4. Start the user frontend and admin dashboard
+5. Start Caddy, Loki, Promtail, Prometheus and Grafana
 
 ### 4. Generate Swagger docs (first time only)
 
@@ -231,14 +259,16 @@ docker compose up --build ticketfair-app
 
 ### 5. Access
 
-| Service | URL |
-|---|---|
-| API | http://localhost:8000 |
-| Swagger | http://localhost:8000/swagger/index.html |
-| Admin Dashboard | http://localhost:3001 |
-| CockroachDB UI | http://localhost:8081 |
-| Grafana | http://localhost:3000 |
-| Prometheus | http://localhost:9090 |
+| Service | Direct URL | Via Caddy |
+|---|---|---|
+| API | http://localhost:8000 | http://ticketfair.localhost |
+| Swagger | http://localhost:8000/swagger/index.html | — |
+| User Frontend | http://localhost:3002 | http://app.localhost |
+| Admin Dashboard | http://localhost:3001 | http://dashboard.localhost |
+| LocalStack / S3 | http://localhost:4566 | — |
+| CockroachDB UI | http://localhost:8081 | — |
+| Grafana | http://localhost:3000 | http://grafana.localhost |
+| Prometheus | http://localhost:9090 | — |
 
 ---
 
@@ -256,7 +286,7 @@ COCKROACH_USER=root
 COCKROACH_DB=ticketfair
 
 # JWT
-JWT_SECRET=your_very_long_secret_key
+JWT_SECRET=your_very_long_secret_key_change_this
 
 # SMTP (optional — without this, emails are only logged)
 SMTP_HOST=smtp.gmail.com
@@ -265,6 +295,20 @@ SMTP_USERNAME=your@email.com
 SMTP_PASSWORD=your_app_password
 SMTP_FROM=your@email.com
 SMTP_FROM_NAME=TicketFair
+
+# AWS S3 / LocalStack
+# Development (LocalStack):
+AWS_ENDPOINT_URL=http://localstack:4566
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
+S3_BUCKET=ticketfair-images
+
+# Production (real AWS — remove AWS_ENDPOINT_URL):
+# AWS_REGION=us-east-1
+# AWS_ACCESS_KEY_ID=AKIAxxxxxxxxxxxxxxxxx
+# AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# S3_BUCKET=ticketfair-images-prod
 ```
 
 ---
@@ -309,13 +353,15 @@ POST /api/v1/private/logout
 ### 🏪 Merchant (requires merchant token)
 
 ```
-PUT  /api/v1/merchant/update
-POST /api/v1/merchant/events/new
-PUT  /api/v1/merchant/events/:id
-POST /api/v1/merchant/tickets/:id/validate
-POST /api/v1/merchant/rep/new
-PUT  /api/v1/merchant/rep/:id
-POST /api/v1/merchant/logout
+PUT    /api/v1/merchant/update
+POST   /api/v1/merchant/events/new
+PUT    /api/v1/merchant/events/:id
+POST   /api/v1/merchant/events/:id/image    ← upload cover image (multipart)
+DELETE /api/v1/merchant/events/:id/image    ← remove cover image
+POST   /api/v1/merchant/tickets/:id/validate
+POST   /api/v1/merchant/rep/new
+PUT    /api/v1/merchant/rep/:id
+POST   /api/v1/merchant/logout
 ```
 
 ### 🔑 Admin (requires admin token)
@@ -400,7 +446,7 @@ merchants        — Event producers
 merchant_reps    — Merchant representatives
 profiles         — User profiles (1:1 with users)
 addresses        — Profile addresses (1:1 with profiles)
-events           — Events created by merchants
+events           — Events created by merchants (includes image_url)
 transactions     — Ticket purchases
 tickets          — Tickets linked to transactions
 verifications    — Email/phone verification codes
@@ -424,6 +470,104 @@ Refund    →  refunded
 
 ---
 
+## Image Storage (S3 / LocalStack)
+
+Event cover images are stored in AWS S3. In development, [LocalStack](https://localstack.cloud) emulates the S3 service locally — no AWS account or credentials required.
+
+### How it works
+
+```
+Merchant uploads image
+        │
+        ▼
+POST /merchant/events/:id/image
+(multipart/form-data, field: "image")
+        │
+        ▼
+Validation (JPEG/PNG/WebP, max 5MB, real image check)
+        │
+        ▼
+Upload to S3: events/<uuid>.<ext>
+        │
+        ▼
+Save URL to events.image_url in DB
+        │
+        ▼
+URL returned in all EventResponse payloads
+        │
+        ▼
+Frontend renders image from S3 URL
+```
+
+### Upload an event image
+
+```bash
+curl -X POST http://localhost:8000/api/v1/merchant/events/<event_id>/image \
+  -H "Authorization: Bearer <merchant_token>" \
+  -F "image=@/path/to/photo.jpg"
+```
+
+Response:
+
+```json
+{
+  "message": "image uploaded successfully",
+  "image_url": "http://localhost:4566/ticketfair-images/events/abc123.jpg"
+}
+```
+
+### Delete an event image
+
+```bash
+curl -X DELETE http://localhost:8000/api/v1/merchant/events/<event_id>/image \
+  -H "Authorization: Bearer <merchant_token>"
+```
+
+### Image validation rules
+
+| Rule | Value |
+|---|---|
+| Allowed formats | JPEG, PNG, WebP |
+| Max size | 5 MB |
+| Validation | Real image decode check (not just MIME sniffing) |
+| Key format | `events/<uuid>.<ext>` |
+| Old image | Automatically deleted from S3 when replaced |
+
+### S3 bucket
+
+| Setting | Value |
+|---|---|
+| Bucket name | `ticketfair-images` |
+| Region | `us-east-1` |
+| Access | Public read (images are publicly accessible) |
+| LocalStack endpoint | `http://localhost:4566` |
+
+### LocalStack setup
+
+LocalStack starts automatically via Docker Compose. The `scripts/localstack-init.sh` script runs on startup and creates the bucket with public read access and CORS headers.
+
+To inspect the bucket manually:
+
+```bash
+# List bucket contents
+aws --endpoint-url=http://localhost:4566 s3 ls s3://ticketfair-images/ --recursive
+
+# Upload a test file
+aws --endpoint-url=http://localhost:4566 s3 cp test.jpg s3://ticketfair-images/test.jpg
+
+# Or use awslocal (LocalStack CLI wrapper)
+awslocal s3 ls s3://ticketfair-images/
+```
+
+### Moving to production (real AWS S3)
+
+1. Remove `AWS_ENDPOINT_URL` from `.env`
+2. Set real `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
+3. Create the bucket in AWS console and set the bucket policy to allow public reads
+4. Optionally put CloudFront in front for CDN caching
+
+---
+
 ## Observability
 
 ### Structured Logging
@@ -434,8 +578,9 @@ In production (`GIN_MODE=release`) all logs are emitted as JSON and collected by
 {
   "time":    "2026-03-29T12:00:00Z",
   "level":   "INFO",
-  "msg":     "Client login successful",
-  "user_id": "uuid"
+  "msg":     "Image uploaded",
+  "key":     "events/abc123.jpg",
+  "url":     "http://localhost:4566/ticketfair-images/events/abc123.jpg"
 }
 ```
 
@@ -451,7 +596,7 @@ Add Loki as a data source at `http://loki:3100` to query logs.
 
 ---
 
-## Admin Dashboard (not public avaiable yet)
+## Admin Dashboard (not publicly avaiable yet)
 
 Web interface for platform management.
 
@@ -464,16 +609,48 @@ Password: PassW0rd!
 ```
 
 **Features:**
-- Overview with real-time statistics
+- Overview with real-time statistics (users, merchants, events, capacity)
 - List, create, activate and deactivate users
 - List, create, activate and deactivate merchants
 - View all active events
 
 ---
 
+## User Frontend (Not publicly avaiable yet)
+
+Public-facing web application for browsing events and buying tickets.
+
+**URL:** http://localhost:3002
+
+**Features:**
+
+| Feature | Description |
+|---|---|
+| Event listing | Browse all upcoming events with cover images from S3 |
+| Search | Filter events by name, location or description |
+| Event detail | View full details, capacity and buy tickets inline |
+| Authentication | Register and sign in without leaving the page |
+| Ticket purchase | Enter amount and buy a ticket directly |
+| My Tickets | View all purchased tickets and their status |
+| Responsive | Works on mobile, tablet and desktop |
+
+**Design:** Editorial serif aesthetic — warm cream palette, Fraunces display font, Cabinet Grotesk for UI text.
+
+### User flow
+
+```
+1. Browse events on the homepage
+2. Click an event card to open the detail modal
+3. Sign in or register (inline, no page reload)
+4. Enter purchase amount and click "Buy Now"
+5. View purchased tickets under "My Tickets" in the nav
+```
+
+---
+
 ## Testing
 
-### Run Unit Tests (not public avaiable yet)
+### Run Unit Tests
 
 ```bash
 go test ./...
@@ -499,9 +676,29 @@ Import `ticketfair.postman_collection.json` into Postman to test all endpoints w
 5.  Client Login
 6.  Create Profile
 7.  Send Email Verification → check logs → Verify Email
-8.  Purchase Ticket (Summer Festival 2026)
-9.  List My Tickets
-10. Validate Ticket (merchant)
+8.  Create Event
+9.  Upload Event Image       ← POST /merchant/events/:id/image (multipart)
+10. List Events              ← verify image_url is present
+11. Purchase Ticket
+12. List My Tickets
+13. Validate Ticket (merchant)
+14. Delete Event Image       ← DELETE /merchant/events/:id/image
+```
+
+### Test image upload with curl
+
+```bash
+# 1. Login as merchant
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/public/auth/merchant/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"contato@ticketfairprod.com","password":"PassW0rd!"}' \
+  | jq -r '.data.token')
+
+# 2. Upload image to seeded event
+curl -X POST \
+  http://localhost:8000/api/v1/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/image \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "image=@./my-event.jpg"
 ```
 
 ---
@@ -536,6 +733,7 @@ The database is automatically initialized with test data on first run.
 | Location | Cianorte Exhibition Park — PR, Brazil |
 | Date | Dec 20, 2026 at 6:00 PM UTC |
 | Capacity | 1000 |
+| Image | Upload via `POST /merchant/events/:id/image` after first boot |
 | ID | `c3d4e5f6-a7b8-9012-cdef-123456789012` |
 
 ### Admin

@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TicketFair — Find your next event</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,700;0,900;1,300;1,700&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cream:    #f5f0e8;
+      --warm:     #ede8dc;
+      --ink:      #1a1410;
+      --ink2:     #3d3530;
+      --rust:     #c4440a;
+      --rust2:    #e05a1a;
+      --sage:     #5a7a6a;
+      --gold:     #c8922a;
+      --border:   #d4cec4;
+      --shadow:   rgba(26,20,16,.08);
+      --font-d:   'Fraunces', Georgia, serif;
+      --font-b:   'Cabinet Grotesk', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--cream);
+      color: var(--ink);
+      font-family: var(--font-b);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── GRAIN OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: .5;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(245,240,232,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 48px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-family: var(--font-d);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -.5px;
+      cursor: pointer;
+    }
+    .nav-logo span { color: var(--rust); }
+
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+
+    .nav-btn {
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-family: var(--font-b);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all .15s ease;
+    }
+    .nav-btn-ghost {
+      background: transparent;
+      color: var(--ink2);
+      border: 1px solid var(--border);
+    }
+    .nav-btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+    .nav-btn-primary {
+      background: var(--rust);
+      color: white;
+    }
+    .nav-btn-primary:hover { background: var(--rust2); }
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink2);
+    }
+    .nav-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--rust);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 100px 48px 80px;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(196,68,10,.08);
+      border: 1px solid rgba(196,68,10,.2);
+      border-radius: 99px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--rust);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-family: var(--font-d);
+      font-size: clamp(42px, 5vw, 64px);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+    }
+    .hero-title em {
+      font-style: italic;
+      color: var(--rust);
+    }
+
+    .hero-desc {
+      font-size: 16px;
+      color: var(--ink2);
+      line-height: 1.7;
+      margin-bottom: 40px;
+      max-width: 440px;
+    }
+
+    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .btn-lg {
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-family: var(--font-b);
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      border: none;
+      transition: all .2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-rust { background: var(--rust); color: white; }
+    .btn-rust:hover { background: var(--rust2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(196,68,10,.25); }
+    .btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--border); }
+    .btn-outline:hover { border-color: var(--ink); transform: translateY(-2px); }
+
+    .hero-visual {
+      position: relative;
+    }
+    .hero-card-stack {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+    }
+    .hero-card {
+      position: absolute;
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px var(--shadow);
+      overflow: hidden;
+    }
+    .hero-card:nth-child(1) {
+      width: 85%; top: 0; left: 8%;
+      transform: rotate(-2deg);
+      z-index: 1;
+    }
+    .hero-card:nth-child(2) {
+      width: 78%; top: 15%; left: 15%;
+      transform: rotate(1.5deg);
+      z-index: 2;
+    }
+    .hero-card:nth-child(3) {
+      width: 82%; top: 8%; left: 6%;
+      transform: rotate(.5deg);
+      z-index: 3;
+    }
+    .hero-card-img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #f0e8d8, #e0d4c0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+    }
+    .hero-card-body { padding: 16px; }
+    .hero-card-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--rust);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .hero-card-title { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
+    .hero-card-meta { font-size: 12px; color: var(--ink2); display: flex; gap: 12px; }
+
+    /* ── SEARCH ── */
+    .search-bar {
+      max-width: 700px;
+      margin: 0 auto 64px;
+      padding: 0 48px;
+    }
+    .search-input-wrap {
+      display: flex;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px var(--shadow);
+      transition: border-color .15s ease;
+    }
+    .search-input-wrap:focus-within { border-color: var(--rust); }
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 16px 20px;
+      font-family: var(--font-b);
+      font-size: 14px;
+      background: transparent;
+    }
+    .search-btn {
+      background: var(--rust);
+      color: white;
+      border: none;
+      padding: 0 24px;
+      font-family: var(--font-b);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s ease;
+    }
+    .search-btn:hover { background: var(--rust2); }
+
+    /* ── EVENTS GRID ── */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 48px 80px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .section-title {
+      font-family: var(--font-d);
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    .section-link {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--rust);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .section-link:hover { text-decoration: underline; }
+
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .event-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: all .2s ease;
+      cursor: pointer;
+    }
+    .event-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 48px var(--shadow);
+      border-color: var(--rust);
+    }
+
+    .event-card-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background: linear-gradient(135deg, var(--warm), var(--border));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      position: relative;
+    }
+    .event-card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      inset: 0;
+    }
+
+    .event-card-body { padding: 20px; }
+    .event-card-date {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--rust);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .event-card-title {
+      font-family: var(--font-d);
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 8px;
+      letter-spacing: -.3px;
+    }
+    .event-card-location {
+      font-size: 13px;
+      color: var(--ink2);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .event-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 16px;
+      border-top: 1px solid var(--warm);
+    }
+    .event-card-capacity {
+      font-size: 12px;
+      color: var(--ink2);
+    }
+    .event-card-capacity strong { color: var(--ink); }
+    .event-card-buy {
+      padding: 8px 16px;
+      background: var(--rust);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-family: var(--font-b);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s ease;
+    }
+    .event-card-buy:hover { background: var(--rust2); }
+
+    /* ── SKELETON ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--warm) 25%, var(--border) 50%, var(--warm) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .event-card-skeleton .event-card-image { background: var(--warm); }
+
+    /* ── MODAL ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,20,16,.5);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modalIn .25s ease;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: translateY(20px) scale(.97); } to { opacity: 1; transform: none; } }
+
+    .modal-header {
+      padding: 32px 32px 0;
+    }
+    .modal-title {
+      font-family: var(--font-d);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -.5px;
+      margin-bottom: 6px;
+    }
+    .modal-desc { font-size: 13px; color: var(--ink2); }
+    .modal-body { padding: 24px 32px 32px; }
+    .modal-close {
+      float: right;
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--ink2);
+      margin-top: -4px;
+    }
+
+    /* ── AUTH TABS ── */
+    .tab-row {
+      display: flex;
+      background: var(--warm);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-family: var(--font-b);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--ink2);
+      transition: all .15s ease;
+    }
+    .tab-btn.active { background: white; color: var(--ink); box-shadow: 0 1px 4px var(--shadow); }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ink2);
+      margin-bottom: 6px;
+      letter-spacing: .3px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font-b);
+      font-size: 14px;
+      color: var(--ink);
+      outline: none;
+      transition: border-color .15s ease;
+    }
+    .form-input:focus { border-color: var(--rust); }
+    .form-input::placeholder { color: #bbb; }
+
+    .form-submit {
+      width: 100%;
+      padding: 13px;
+      background: var(--rust);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--font-b);
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background .15s ease;
+      margin-top: 8px;
+    }
+    .form-submit:hover { background: var(--rust2); }
+
+    .form-alert {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .form-alert.show { display: block; }
+    .form-alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+    .form-alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+
+    /* ── EVENT DETAIL MODAL ── */
+    .event-detail-image {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      background: linear-gradient(135deg, var(--warm), var(--border));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      border-radius: 20px 20px 0 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .event-detail-image img {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .event-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .event-meta-item {
+      background: var(--warm);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .event-meta-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--ink2);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .event-meta-value {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .buy-section {
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .buy-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+    .buy-amount-wrap { display: flex; gap: 8px; }
+    .buy-amount {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font-b);
+      font-size: 14px;
+      outline: none;
+    }
+    .buy-amount:focus { border-color: var(--rust); }
+    .buy-btn {
+      padding: 10px 20px;
+      background: var(--rust);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--font-b);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background .15s ease;
+      white-space: nowrap;
+    }
+    .buy-btn:hover { background: var(--rust2); }
+
+    /* ── MY TICKETS ── */
+    .tickets-list { display: flex; flex-direction: column; gap: 12px; }
+    .ticket-item {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .ticket-icon { font-size: 28px; flex-shrink: 0; }
+    .ticket-info { flex: 1; }
+    .ticket-event { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+    .ticket-meta { font-size: 12px; color: var(--ink2); }
+    .ticket-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .ticket-status-active { background: #f0fdf4; color: #15803d; }
+    .ticket-status-used { background: #f8fafc; color: #64748b; }
+    .ticket-status-refunded { background: #fef2f2; color: #b91c1c; }
+
+    /* ── TOAST ── */
+    .toast-wrap {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      background: var(--ink);
+      color: white;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: toastIn .3s ease;
+      min-width: 260px;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } }
+    .toast.success { border-left: 3px solid #22c55e; }
+    .toast.error { border-left: 3px solid #ef4444; }
+
+    /* ── EMPTY ── */
+    .empty { text-align: center; padding: 48px; color: var(--ink2); }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
+    .empty-text { font-family: var(--font-d); font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+    .empty-sub { font-size: 13px; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--ink2);
+      font-size: 13px;
+    }
+    .footer-logo { font-family: var(--font-d); font-weight: 700; font-size: 18px; }
+    .footer-logo span { color: var(--rust); }
+
+    /* ── LOADER ── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .hero-visual { display: none; }
+      .events-grid { grid-template-columns: repeat(2, 1fr); }
+      nav { padding: 0 24px; }
+      .section { padding: 0 24px 60px; }
+      .hero { padding: 60px 24px 48px; }
+      .search-bar { padding: 0 24px; }
+    }
+    @media (max-width: 600px) {
+      .events-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <div class="nav-logo" onclick="showHome()">Ticket<span>Fair</span></div>
+  <div class="nav-links" id="nav-links">
+    <button class="nav-btn nav-btn-ghost" onclick="openAuth('login')">Sign In</button>
+    <button class="nav-btn nav-btn-primary" onclick="openAuth('register')">Get Started</button>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section class="hero" id="hero-section">
+  <div>
+    <div class="hero-eyebrow">🎟 Discover · Buy · Experience</div>
+    <h1 class="hero-title">
+      Your next <em>unforgettable</em> event starts here
+    </h1>
+    <p class="hero-desc">
+      Browse hundreds of events, buy tickets in seconds and have them ready on your phone. No queues, no stress.
+    </p>
+    <div class="hero-cta">
+      <button class="btn-lg btn-rust" onclick="document.querySelector('.search-bar input').focus()">
+        Browse Events →
+      </button>
+      <button class="btn-lg btn-outline" onclick="openAuth('register')">
+        Create Account
+      </button>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="hero-card-stack">
+      <div class="hero-card">
+        <div class="hero-card-img">🎸</div>
+        <div class="hero-card-body">
+          <div class="hero-card-tag">Music</div>
+          <div class="hero-card-title">Rock Night Live</div>
+          <div class="hero-card-meta"><span>📍 Arena</span><span>Dec 15</span></div>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-img">🎭</div>
+        <div class="hero-card-body">
+          <div class="hero-card-tag">Theater</div>
+          <div class="hero-card-title">Classic Hamlet</div>
+          <div class="hero-card-meta"><span>📍 Grand Theater</span><span>Jan 8</span></div>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-img">🎆</div>
+        <div class="hero-card-body">
+          <div class="hero-card-tag">Festival</div>
+          <div class="hero-card-title">Summer Festival 2026</div>
+          <div class="hero-card-meta"><span>📍 Cianorte</span><span>Dec 20</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SEARCH ══ -->
+<div class="search-bar">
+  <div class="search-input-wrap">
+    <input class="search-input" id="search-input" placeholder="Search events, locations, artists…" oninput="filterEvents()" />
+    <button class="search-btn">Search</button>
+  </div>
+</div>
+
+<!-- ══ EVENTS ══ -->
+<section class="section">
+  <div class="section-head">
+    <h2 class="section-title">Upcoming Events</h2>
+    <span class="section-link" id="events-count"></span>
+  </div>
+  <div class="events-grid" id="events-grid">
+    <!-- Skeletons -->
+    <div class="event-card event-card-skeleton">
+      <div class="event-card-image"></div>
+      <div class="event-card-body">
+        <div class="skeleton" style="height:12px;width:60%;margin-bottom:10px"></div>
+        <div class="skeleton" style="height:20px;width:90%;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:12px;width:50%"></div>
+      </div>
+    </div>
+    <div class="event-card event-card-skeleton">
+      <div class="event-card-image"></div>
+      <div class="event-card-body">
+        <div class="skeleton" style="height:12px;width:60%;margin-bottom:10px"></div>
+        <div class="skeleton" style="height:20px;width:90%;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:12px;width:50%"></div>
+      </div>
+    </div>
+    <div class="event-card event-card-skeleton">
+      <div class="event-card-image"></div>
+      <div class="event-card-body">
+        <div class="skeleton" style="height:12px;width:60%;margin-bottom:10px"></div>
+        <div class="skeleton" style="height:20px;width:90%;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:12px;width:50%"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="footer-logo">Ticket<span>Fair</span></div>
+  <div>© 2026 TicketFair. All rights reserved.</div>
+</footer>
+
+<!-- ══ AUTH MODAL ══ -->
+<div class="overlay" id="auth-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeModal('auth-overlay')">✕</button>
+      <div class="modal-title" id="auth-modal-title">Welcome back</div>
+      <div class="modal-desc" id="auth-modal-desc">Sign in to your TicketFair account.</div>
+    </div>
+    <div class="modal-body">
+      <div class="tab-row">
+        <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Create Account</button>
+      </div>
+
+      <div id="auth-alert" class="form-alert form-alert-error"></div>
+
+      <!-- Login -->
+      <div id="form-login">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input id="l-email" type="email" class="form-input" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input id="l-password" type="password" class="form-input" placeholder="••••••••" />
+        </div>
+        <button class="form-submit" onclick="doLogin()">
+          <span id="l-btn-text">Sign In</span>
+        </button>
+      </div>
+
+      <!-- Register -->
+      <div id="form-register" style="display:none">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input id="r-email" type="email" class="form-input" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input id="r-username" class="form-input" placeholder="cooluser" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input id="r-password" type="password" class="form-input" placeholder="Min 8 chars, upper, number, symbol" />
+        </div>
+        <button class="form-submit" onclick="doRegister()">
+          <span id="r-btn-text">Create Account</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EVENT DETAIL MODAL ══ -->
+<div class="overlay" id="event-overlay">
+  <div class="modal" style="max-width:560px">
+    <div class="event-detail-image" id="event-detail-image">🎟</div>
+    <div class="modal-body">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div class="event-card-date" id="ed-date"></div>
+          <div class="modal-title" style="font-size:24px" id="ed-title"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal('event-overlay')" style="margin-top:0">✕</button>
+      </div>
+      <p style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:16px" id="ed-desc"></p>
+      <div class="event-meta-grid">
+        <div class="event-meta-item">
+          <div class="event-meta-label">📍 Location</div>
+          <div class="event-meta-value" id="ed-location"></div>
+        </div>
+        <div class="event-meta-item">
+          <div class="event-meta-label">⏰ Ends</div>
+          <div class="event-meta-value" id="ed-end"></div>
+        </div>
+        <div class="event-meta-item">
+          <div class="event-meta-label">🎟 Available</div>
+          <div class="event-meta-value" id="ed-capacity"></div>
+        </div>
+        <div class="event-meta-item">
+          <div class="event-meta-label">🏪 Organizer</div>
+          <div class="event-meta-value" id="ed-merchant"></div>
+        </div>
+      </div>
+      <div class="buy-section" id="buy-section">
+        <div class="buy-title">Purchase a Ticket</div>
+        <div id="buy-alert" class="form-alert form-alert-error"></div>
+        <div class="buy-amount-wrap">
+          <input id="buy-amount" type="number" class="buy-amount" placeholder="Amount (R$)" min="0.01" step="0.01" />
+          <button class="buy-btn" onclick="purchaseTicket()">
+            <span id="buy-btn-text">Buy Now</span>
+          </button>
+        </div>
+        <p style="font-size:11px;color:var(--ink2);margin-top:8px">You'll receive a ticket ID by email after purchase.</p>
+      </div>
+      <div id="buy-login-prompt" style="display:none;text-align:center;padding:20px;background:var(--warm);border-radius:12px;margin-top:20px">
+        <p style="font-size:14px;font-weight:600;margin-bottom:12px">Sign in to purchase this ticket</p>
+        <button class="btn-lg btn-rust" onclick="closeModal('event-overlay');openAuth('login')" style="font-size:13px;padding:10px 20px">Sign In</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MY TICKETS MODAL ══ -->
+<div class="overlay" id="tickets-overlay">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <button class="modal-close" onclick="closeModal('tickets-overlay')">✕</button>
+      <div class="modal-title">My Tickets</div>
+      <div class="modal-desc">All your purchased tickets.</div>
+    </div>
+    <div class="modal-body">
+      <div class="tickets-list" id="tickets-list">
+        <div style="text-align:center;padding:32px;color:var(--ink2)">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOASTS ══ -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const API = window.API_BASE || 'http://localhost:8000/api/v1';
+let token = localStorage.getItem('tf_token') || '';
+let currentUser = JSON.parse(localStorage.getItem('tf_user') || '{}');
+let allEvents = [];
+let currentEventID = null;
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+window.onload = () => {
+  if (token) renderLoggedInNav();
+  loadEvents();
+};
+
+// ═══════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════
+function renderLoggedInNav() {
+  const nav = document.getElementById('nav-links');
+  nav.innerHTML = `
+    <div class="nav-user">
+      <div class="nav-avatar">${(currentUser.username || 'U')[0].toUpperCase()}</div>
+      ${currentUser.username || 'User'}
+    </div>
+    <button class="nav-btn nav-btn-ghost" onclick="openTickets()">🎟 My Tickets</button>
+    <button class="nav-btn nav-btn-ghost" onclick="doLogout()">Sign Out</button>
+  `;
+}
+
+function showHome() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════
+async function loadEvents() {
+  try {
+    const res = await fetch(`${API}/public/events?page=1&limit=50`);
+    const data = await res.json();
+    allEvents = data.data || [];
+    renderEvents(allEvents);
+    const count = data.total || allEvents.length;
+    document.getElementById('events-count').textContent = `${count} event${count !== 1 ? 's' : ''} available`;
+  } catch(e) {
+    document.getElementById('events-grid').innerHTML = `
+      <div class="empty" style="grid-column:1/-1">
+        <div class="empty-icon">😔</div>
+        <div class="empty-text">Could not load events</div>
+        <div class="empty-sub">Make sure the API is running at ${API}</div>
+      </div>
+    `;
+  }
+}
+
+function renderEvents(events) {
+  const grid = document.getElementById('events-grid');
+
+  if (!events.length) {
+    grid.innerHTML = `
+      <div class="empty" style="grid-column:1/-1">
+        <div class="empty-icon">🎟</div>
+        <div class="empty-text">No events found</div>
+        <div class="empty-sub">Try a different search term.</div>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = events.map(ev => {
+    const emoji = eventEmoji(ev.name);
+    const imageHTML = ev.image_url
+      ? `<div class="event-card-image">${emoji}<img src="${ev.image_url}" alt="${ev.name}" onerror="this.style.display='none'" /></div>`
+      : `<div class="event-card-image">${emoji}</div>`;
+
+    return `
+      <div class="event-card" onclick="openEvent('${ev.event_id}')">
+        ${imageHTML}
+        <div class="event-card-body">
+          <div class="event-card-date">${fmtDate(ev.start_time)}</div>
+          <div class="event-card-title">${ev.name}</div>
+          <div class="event-card-location">📍 ${ev.location}</div>
+          <div class="event-card-footer">
+            <div class="event-card-capacity"><strong>${ev.capacity}</strong> spots left</div>
+            <button class="event-card-buy" onclick="event.stopPropagation();openEvent('${ev.event_id}')">Get Ticket</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterEvents() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  if (!q) { renderEvents(allEvents); return; }
+  const filtered = allEvents.filter(ev =>
+    ev.name.toLowerCase().includes(q) ||
+    ev.location.toLowerCase().includes(q) ||
+    (ev.description || '').toLowerCase().includes(q)
+  );
+  renderEvents(filtered);
+}
+
+// ═══════════════════════════════════════
+// EVENT DETAIL
+// ═══════════════════════════════════════
+function openEvent(id) {
+  const ev = allEvents.find(e => e.event_id === id);
+  if (!ev) return;
+  currentEventID = id;
+
+  // Image
+  const imgEl = document.getElementById('event-detail-image');
+  const emoji = eventEmoji(ev.name);
+  imgEl.innerHTML = emoji;
+  if (ev.image_url) {
+    imgEl.innerHTML += `<img src="${ev.image_url}" alt="${ev.name}" onerror="this.style.display='none'" />`;
+  }
+
+  document.getElementById('ed-date').textContent = fmtDate(ev.start_time);
+  document.getElementById('ed-title').textContent = ev.name;
+  document.getElementById('ed-desc').textContent = ev.description || 'No description provided.';
+  document.getElementById('ed-location').textContent = ev.location;
+  document.getElementById('ed-end').textContent = fmtDate(ev.end_time);
+  document.getElementById('ed-capacity').textContent = `${ev.capacity} tickets`;
+  document.getElementById('ed-merchant').textContent = ev.merchant_id?.substring(0, 8) + '…';
+
+  // Show buy or login prompt
+  if (token) {
+    document.getElementById('buy-section').style.display = 'block';
+    document.getElementById('buy-login-prompt').style.display = 'none';
+    document.getElementById('buy-alert').classList.remove('show');
+    document.getElementById('buy-amount').value = '';
+    document.getElementById('buy-btn-text').textContent = 'Buy Now';
+  } else {
+    document.getElementById('buy-section').style.display = 'none';
+    document.getElementById('buy-login-prompt').style.display = 'block';
+  }
+
+  openModal('event-overlay');
+}
+
+// ═══════════════════════════════════════
+// PURCHASE
+// ═══════════════════════════════════════
+async function purchaseTicket() {
+  const amount = parseFloat(document.getElementById('buy-amount').value);
+  const alert = document.getElementById('buy-alert');
+  const btn = document.getElementById('buy-btn-text');
+
+  alert.classList.remove('show');
+
+  if (!amount || amount <= 0) {
+    alert.textContent = 'Please enter a valid amount.';
+    alert.classList.add('show');
+    return;
+  }
+
+  btn.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    const res = await fetch(`${API}/private/tickets/purchase`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ event_id: currentEventID, amount })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert.textContent = data.error || 'Purchase failed.';
+      alert.classList.add('show');
+      btn.textContent = 'Buy Now';
+      return;
+    }
+
+    closeModal('event-overlay');
+    toast(`🎟 Ticket purchased! Transaction ID: ${data.data.transaction_id.substring(0, 8)}…`, 'success');
+    await loadEvents(); // refresh capacity
+  } catch(e) {
+    alert.textContent = 'Network error. Please try again.';
+    alert.classList.add('show');
+    btn.textContent = 'Buy Now';
+  }
+}
+
+// ═══════════════════════════════════════
+// MY TICKETS
+// ═══════════════════════════════════════
+async function openTickets() {
+  openModal('tickets-overlay');
+  document.getElementById('tickets-list').innerHTML = '<div style="text-align:center;padding:32px;color:var(--ink2)">Loading…</div>';
+
+  try {
+    const res = await fetch(`${API}/private/tickets?page=1&limit=50`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const tickets = data.data || [];
+
+    if (!tickets.length) {
+      document.getElementById('tickets-list').innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">🎟</div>
+          <div class="empty-text">No tickets yet</div>
+          <div class="empty-sub">Purchase a ticket to see it here.</div>
+        </div>
+      `;
+      return;
+    }
+
+    document.getElementById('tickets-list').innerHTML = tickets.map(t => {
+      const statusClass = { active: 'ticket-status-active', used: 'ticket-status-used', refunded: 'ticket-status-refunded' }[t.status] || 'ticket-status-active';
+      const eventName = t.event?.name || 'Event';
+      const eventDate = t.event ? fmtDate(t.event.start_time) : '—';
+      return `
+        <div class="ticket-item">
+          <div class="ticket-icon">🎟</div>
+          <div class="ticket-info">
+            <div class="ticket-event">${eventName}</div>
+            <div class="ticket-meta">${eventDate} · ID: ${t.ticket_id.substring(0,8)}…</div>
+          </div>
+          <div class="ticket-status ${statusClass}">${t.status}</div>
+        </div>
+      `;
+    }).join('');
+  } catch(e) {
+    document.getElementById('tickets-list').innerHTML = '<div style="text-align:center;padding:32px;color:#ef4444">Failed to load tickets.</div>';
+  }
+}
+
+// ═══════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════
+function openAuth(tab) {
+  switchTab(tab);
+  document.getElementById('auth-alert').classList.remove('show');
+  openModal('auth-overlay');
+}
+
+function switchTab(tab) {
+  document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('auth-alert').classList.remove('show');
+
+  if (tab === 'login') {
+    document.getElementById('auth-modal-title').textContent = 'Welcome back';
+    document.getElementById('auth-modal-desc').textContent = 'Sign in to your TicketFair account.';
+  } else {
+    document.getElementById('auth-modal-title').textContent = 'Join TicketFair';
+    document.getElementById('auth-modal-desc').textContent = 'Create a free account to start buying tickets.';
+  }
+}
+
+async function doLogin() {
+  const alert = document.getElementById('auth-alert');
+  const btn = document.getElementById('l-btn-text');
+  alert.classList.remove('show');
+  btn.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    const res = await fetch(`${API}/public/auth/client/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: document.getElementById('l-email').value.trim(),
+        password: document.getElementById('l-password').value
+      })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert.textContent = data.error || 'Invalid credentials.';
+      alert.classList.add('show');
+      btn.textContent = 'Sign In';
+      return;
+    }
+
+    token = data.data.token;
+    currentUser = data.data.user;
+    localStorage.setItem('tf_token', token);
+    localStorage.setItem('tf_user', JSON.stringify(currentUser));
+
+    closeModal('auth-overlay');
+    renderLoggedInNav();
+    toast(`Welcome back, ${currentUser.username}! 👋`, 'success');
+  } catch(e) {
+    alert.textContent = 'Connection error. Is the API running?';
+    alert.classList.add('show');
+    btn.textContent = 'Sign In';
+  }
+}
+
+async function doRegister() {
+  const alert = document.getElementById('auth-alert');
+  const btn = document.getElementById('r-btn-text');
+  alert.classList.remove('show');
+  btn.innerHTML = '<div class="spinner"></div>';
+
+  try {
+    const res = await fetch(`${API}/public/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: document.getElementById('r-email').value.trim(),
+        username: document.getElementById('r-username').value.trim(),
+        password: document.getElementById('r-password').value
+      })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      const msg = data.error || (data.errors ? Object.values(data.errors).join(' · ') : 'Registration failed.');
+      alert.textContent = msg;
+      alert.classList.add('show');
+      btn.textContent = 'Create Account';
+      return;
+    }
+
+    // Auto login after registration
+    alert.className = 'form-alert form-alert-success show';
+    alert.textContent = 'Account created! Signing you in…';
+    document.getElementById('l-email').value = document.getElementById('r-email').value;
+    document.getElementById('l-password').value = document.getElementById('r-password').value;
+    await doLogin();
+  } catch(e) {
+    alert.textContent = 'Connection error. Is the API running?';
+    alert.classList.add('show');
+    btn.textContent = 'Create Account';
+  }
+}
+
+function doLogout() {
+  token = '';
+  currentUser = {};
+  localStorage.removeItem('tf_token');
+  localStorage.removeItem('tf_user');
+  document.getElementById('nav-links').innerHTML = `
+    <button class="nav-btn nav-btn-ghost" onclick="openAuth('login')">Sign In</button>
+    <button class="nav-btn nav-btn-primary" onclick="openAuth('register')">Get Started</button>
+  `;
+  toast('Signed out. See you next time!', 'success');
+}
+
+// ═══════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
+});
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function eventEmoji(name) {
+  const n = name.toLowerCase();
+  if (n.includes('rock') || n.includes('music') || n.includes('show') || n.includes('festival')) return '🎸';
+  if (n.includes('jazz') || n.includes('blues')) return '🎷';
+  if (n.includes('theater') || n.includes('theatre') || n.includes('play')) return '🎭';
+  if (n.includes('comedy')) return '🎤';
+  if (n.includes('art') || n.includes('gallery')) return '🎨';
+  if (n.includes('sport') || n.includes('game')) return '⚽';
+  if (n.includes('food') || n.includes('gastro')) return '🍽';
+  if (n.includes('tech') || n.includes('conference')) return '💻';
+  return '🎟';
+}
+</script>
+</body>
+</html>
