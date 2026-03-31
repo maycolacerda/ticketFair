@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     user_id        UUID          NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
     event_id       UUID          NOT NULL REFERENCES events(event_id) ON DELETE RESTRICT,
     amount         DECIMAL(10,2) NOT NULL,
+    ticket_type_id UUID REFERENCES ticket_types(ticket_type_id) ON DELETE RESTRICT,
+    quantity INT NOT NULL DEFAULT 1,
     status         VARCHAR(20)   NOT NULL DEFAULT 'pending',
     created_at     TIMESTAMPTZ   NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ   NOT NULL DEFAULT now(),
@@ -110,11 +112,54 @@ CREATE TABLE IF NOT EXISTS tickets (
     transaction_id UUID        NOT NULL REFERENCES transactions(transaction_id) ON DELETE RESTRICT,
     user_id        UUID        NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
     event_id       UUID        NOT NULL REFERENCES events(event_id) ON DELETE RESTRICT,
+    ticket_type_id UUID REFERENCES ticket_types(ticket_type_id) ON DELETE RESTRICT,
+    ticket_type_name VARCHAR(100),
+    price_paid_cents BIGINT NOT NULL DEFAULT 0,
     status         VARCHAR(20) NOT NULL DEFAULT 'active',
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at     TIMESTAMPTZ,
     CONSTRAINT chk_ticket_status CHECK (status IN ('active', 'used', 'refunded', 'cancelled'))
+);
+
+CREATE TABLE IF NOT EXISTS ticket_types (
+    ticket_type_id  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id        UUID          NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
+    name            VARCHAR(100)  NOT NULL,
+    description     TEXT,
+    category        VARCHAR(50)   NOT NULL DEFAULT 'general',
+    price_cents     BIGINT        NOT NULL,
+    capacity        INT           NOT NULL,
+    available       INT           NOT NULL,
+    min_per_order   INT           NOT NULL DEFAULT 1,
+    max_per_order   INT           NOT NULL DEFAULT 10,
+    sale_starts_at  TIMESTAMPTZ,
+    sale_ends_at    TIMESTAMPTZ,
+    active          BOOLEAN       NOT NULL DEFAULT true,
+    sort_order      INT           NOT NULL DEFAULT 0,
+    created_at      TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT now(),
+    deleted_at      TIMESTAMPTZ,
+    CONSTRAINT chk_ticket_type_category CHECK (
+        category IN (
+            'general',
+            'vip',
+            'early_bird',
+            'reserved',
+            'group',
+            'day_pass',
+            'tiered',
+            'complimentary',
+            'demographic'
+        )
+    ),
+    CONSTRAINT chk_ticket_type_price     CHECK (price_cents >= 0),
+    CONSTRAINT chk_ticket_type_capacity  CHECK (capacity > 0),
+    CONSTRAINT chk_ticket_type_available CHECK (available >= 0 AND available <= capacity),
+    CONSTRAINT chk_ticket_type_order     CHECK (min_per_order >= 1 AND max_per_order >= min_per_order),
+    CONSTRAINT chk_ticket_type_sale_window CHECK (
+        sale_ends_at IS NULL OR sale_starts_at IS NULL OR sale_ends_at > sale_starts_at
+    )
 );
 
 CREATE TABLE IF NOT EXISTS payments (
@@ -159,6 +204,17 @@ CREATE TABLE IF NOT EXISTS admins (
     deleted_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS password_resets (
+    reset_id    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID        NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    code        VARCHAR(10) NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used_at     TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at  TIMESTAMPTZ
+);
+
+
 -- ─────────────────────────────────────────────
 -- INDEXES
 -- ─────────────────────────────────────────────
@@ -178,6 +234,10 @@ CREATE INDEX IF NOT EXISTS idx_tickets_user_id        ON tickets(user_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_event_id       ON tickets(event_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_transaction_id ON tickets(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_status         ON tickets(status);
+CREATE INDEX IF NOT EXISTS idx_ticket_types_event_id   ON ticket_types(event_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_types_category   ON ticket_types(category);
+CREATE INDEX IF NOT EXISTS idx_ticket_types_active     ON ticket_types(active);
+CREATE INDEX IF NOT EXISTS idx_ticket_types_deleted_at ON ticket_types(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_verifications_user_id ON verifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_verifications_type    ON verifications(type);
 CREATE INDEX IF NOT EXISTS idx_admins_deleted_at ON admins(deleted_at);
@@ -187,6 +247,8 @@ CREATE INDEX IF NOT EXISTS idx_payments_transaction_id    ON payments(transactio
 CREATE INDEX IF NOT EXISTS idx_payments_stripe_payment_id ON payments(stripe_payment_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status            ON payments(status);
 CREATE INDEX IF NOT EXISTS idx_payments_deleted_at        ON payments(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_password_resets_user_id    ON password_resets(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_resets_deleted_at ON password_resets(deleted_at);
 
 
 -- ─────────────────────────────────────────────
@@ -269,7 +331,82 @@ INSERT INTO admins (
     true
 ) ON CONFLICT (email) DO NOTHING;
 
-
+INSERT INTO ticket_types (
+    ticket_type_id,
+    event_id,
+    name,
+    description,
+    category,
+    price_cents,
+    capacity,
+    available,
+    min_per_order,
+    max_per_order,
+    sale_starts_at,
+    sale_ends_at,
+    sort_order
+) VALUES
+(
+    'e1f2a3b4-c5d6-7890-ef12-345678901234',
+    'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    'Early Bird',
+    'Limited early access tickets at a discounted price.',
+    'early_bird',
+    2500,   -- R$ 25,00
+    100,
+    100,
+    1,
+    4,
+    now(),
+    '2026-10-01T00:00:00Z',
+    1
+),
+(
+    'f2a3b4c5-d6e7-8901-f012-456789012345',
+    'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    'General Admission',
+    'Standard access to all event areas.',
+    'general',
+    5000,   -- R$ 50,00
+    700,
+    700,
+    1,
+    10,
+    now(),
+    '2026-12-19T23:59:00Z',
+    2
+),
+(
+    'a3b4c5d6-e7f8-9012-0123-567890123456',
+    'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    'VIP',
+    'Priority entry, exclusive lounge access and meet-and-greet.',
+    'vip',
+    15000,  -- R$ 150,00
+    150,
+    150,
+    1,
+    4,
+    now(),
+    '2026-12-19T23:59:00Z',
+    3
+),
+(
+    'b4c5d6e7-f8a9-0123-1234-678901234567',
+    'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    'Group Pack (4 tickets)',
+    'Buy 4 General Admission tickets and save 20%.',
+    'group',
+    16000,  -- R$ 160,00 for 4 (vs R$ 200,00)
+    50,
+    50,
+    1,
+    1,    -- sold as a pack, quantity = 1 pack
+    now(),
+    '2026-12-19T23:59:00Z',
+    4
+)
+ON CONFLICT DO NOTHING;
 -- ─────────────────────────────────────────────
 -- FUNCTIONS
 -- ─────────────────────────────────────────────
@@ -300,43 +437,115 @@ $$ LANGUAGE SQL;
 
 
 CREATE OR REPLACE FUNCTION purchase_ticket(
-    p_user_id  UUID,
-    p_event_id UUID,
-    p_amount   DECIMAL
+    p_user_id        UUID,
+    p_event_id       UUID,
+    p_ticket_type_id UUID,
+    p_quantity       INT,
+    p_amount         DECIMAL
 ) RETURNS UUID AS $$
-  WITH updated_event AS (
+DECLARE
+    v_transaction_id UUID;
+    v_available      INT;
+    v_tt             RECORD;
+    v_now            TIMESTAMPTZ := now();
+BEGIN
+    -- Lock ticket type row
+    SELECT * INTO v_tt
+    FROM ticket_types
+    WHERE ticket_type_id = p_ticket_type_id
+      AND event_id       = p_event_id
+      AND active         = true
+      AND deleted_at     IS NULL
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'ticket_type_not_found';
+    END IF;
+
+    -- Check sale window
+    IF v_tt.sale_starts_at IS NOT NULL AND v_now < v_tt.sale_starts_at THEN
+        RAISE EXCEPTION 'ticket_sale_not_started';
+    END IF;
+
+    IF v_tt.sale_ends_at IS NOT NULL AND v_now > v_tt.sale_ends_at THEN
+        RAISE EXCEPTION 'ticket_sale_ended';
+    END IF;
+
+    -- Check quantity bounds
+    IF p_quantity < v_tt.min_per_order THEN
+        RAISE EXCEPTION 'ticket_below_minimum';
+    END IF;
+
+    IF p_quantity > v_tt.max_per_order THEN
+        RAISE EXCEPTION 'ticket_exceeds_maximum';
+    END IF;
+
+    -- Check availability
+    IF v_tt.available < p_quantity THEN
+        RAISE EXCEPTION 'ticket_type_sold_out';
+    END IF;
+
+    -- Decrement availability on ticket type
+    UPDATE ticket_types
+    SET available  = available - p_quantity,
+        updated_at = now()
+    WHERE ticket_type_id = p_ticket_type_id;
+
+    -- Also decrement event capacity
     UPDATE events
-    SET capacity = capacity - 1, updated_at = now()
-    WHERE event_id = p_event_id 
-      AND active = true 
-      AND capacity > 0 
-      AND deleted_at IS NULL
-    RETURNING event_id
-  )
-  INSERT INTO transactions (user_id, event_id, amount, status)
-  SELECT p_user_id, event_id, p_amount, 'completed'
-  FROM updated_event
-  RETURNING transaction_id;
-$$ LANGUAGE SQL;
+    SET capacity   = capacity - p_quantity,
+        updated_at = now()
+    WHERE event_id = p_event_id;
+
+    -- Insert transaction
+    INSERT INTO transactions (user_id, event_id, ticket_type_id, amount, quantity, status)
+    VALUES (p_user_id, p_event_id, p_ticket_type_id, p_amount, p_quantity, 'completed')
+    RETURNING transaction_id INTO v_transaction_id;
+
+    RETURN v_transaction_id;
+END;
+$$ LANGUAGE plpgsql;
+
 
 
 CREATE OR REPLACE FUNCTION refund_ticket(
     p_transaction_id UUID
-) RETURNS UUID AS $$
-  WITH refunded_tx AS (
+) RETURNS VOID AS $$
+DECLARE
+    v_tx RECORD;
+BEGIN
+    SELECT * INTO v_tx
+    FROM transactions
+    WHERE transaction_id = p_transaction_id
+      AND deleted_at     IS NULL
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'transaction_not_found';
+    END IF;
+
+    IF v_tx.status != 'completed' THEN
+        RAISE EXCEPTION 'transaction_not_refundable';
+    END IF;
+
+    -- Restore event capacity
+    UPDATE events
+    SET capacity   = capacity + v_tx.quantity,
+        updated_at = now()
+    WHERE event_id = v_tx.event_id;
+
+    -- Restore ticket type availability
+    IF v_tx.ticket_type_id IS NOT NULL THEN
+        UPDATE ticket_types
+        SET available  = available + v_tx.quantity,
+            updated_at = now()
+        WHERE ticket_type_id = v_tx.ticket_type_id;
+    END IF;
+
+    -- Mark transaction refunded
     UPDATE transactions
-    SET status = 'refunded', updated_at = now()
-    WHERE transaction_id = p_transaction_id 
-      AND status = 'completed'
-      AND deleted_at IS NULL
-    RETURNING event_id, transaction_id
-  ),
-  restore_capacity AS (
-    UPDATE events AS e
-    SET capacity = e.capacity + 1, updated_at = now()
-    FROM refunded_tx AS r
-    WHERE e.event_id = r.event_id
-    RETURNING e.event_id 
-  )
-  SELECT transaction_id FROM refunded_tx;
-$$ LANGUAGE SQL;
+    SET status     = 'refunded',
+        updated_at = now()
+    WHERE transaction_id = p_transaction_id;
+END;
+$$ LANGUAGE plpgsql;

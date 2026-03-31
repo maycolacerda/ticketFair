@@ -64,3 +64,8 @@ func SendPurchaseConfirmationEmail(to, username, eventName, ticketID string, amo
 	tmpl := purchaseConfirmationTemplate(username, eventName, ticketID, amount)
 	return sendEmail(to, tmpl.Subject, tmpl.Body)
 }
+
+func SendPasswordResetEmail(to, code string) error {
+	tmpl := passwordResetEmailTemplate(code, "15")
+	return sendEmail(to, tmpl.Subject, tmpl.Body)
+}

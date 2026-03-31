@@ -30,47 +30,50 @@ import (
 func PurchaseTicket(c *gin.Context) {
 	userID, err := services.ExtractTokenID(c)
 	if err != nil {
-		slog.Warn("Unauthorized purchase attempt")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
 	var req dto.PurchaseTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		slog.Warn("Invalid request body", "error", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-
 	if err := validate.Struct(req); err != nil {
-		errs := formatValidationErrors(err)
-		slog.Warn("Purchase validation failed", "errors", errs)
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": errs})
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"errors": formatValidationErrors(err)})
 		return
 	}
 
-	tx, err := services.PurchaseTicket(userID, req.EventID, req.Amount)
+	// Compute amount from ticket type price × quantity
+	amount, err := services.ComputeOrderAmount(req.TicketTypeID, req.Quantity)
 	if err != nil {
-		slog.Warn("Purchase failed",
-			"user_id", userID,
-			"event_id", req.EventID,
-			"error", err.Error(),
-		)
-		switch {
-		case errors.Is(err, services.ErrEventNotFound):
+		if errors.Is(err, services.ErrTicketTypeNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case errors.Is(err, services.ErrEventSoldOut):
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to compute order amount"})
+		}
+		return
+	}
+
+	tx, err := services.PurchaseTicket(userID, req.EventID, req.TicketTypeID, req.Quantity, amount)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrTicketTypeNotFound),
+			errors.Is(err, services.ErrEventNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case errors.Is(err, services.ErrTicketTypeSoldOut):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case errors.Is(err, services.ErrTicketSaleNotStarted),
+			errors.Is(err, services.ErrTicketSaleEnded),
+			errors.Is(err, services.ErrTicketBelowMinimum),
+			errors.Is(err, services.ErrTicketExceedsMaximum):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to purchase ticket"})
 		}
 		return
 	}
 
-	slog.Info("Purchase successful",
-		"transaction_id", tx.TransactionID,
-		"user_id", userID,
-	)
 	c.JSON(http.StatusCreated, gin.H{"data": tx})
 }
 

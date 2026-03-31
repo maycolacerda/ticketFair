@@ -143,3 +143,52 @@ func purchaseConfirmationTemplate(username, eventName, ticketID string, amount f
 `, username, eventName, ticketID, amount),
 	}
 }
+
+func passwordResetEmailTemplate(code, expiryMinutes string) emailTemplate {
+	return emailTemplate{
+		Subject: "TicketFair — Password Reset Code",
+		Body: fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body        { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container  { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; }
+    .header     { background: #1a1a2e; padding: 32px; text-align: center; }
+    .header h1  { color: #ffffff; margin: 0; font-size: 24px; }
+    .body       { padding: 40px 32px; }
+    .code-box   { background: #fff4f0; border: 2px dashed #e05a1a; border-radius: 8px;
+                  text-align: center; padding: 24px; margin: 32px 0; }
+    .code       { font-size: 48px; font-weight: bold; letter-spacing: 12px; color: #1a1a2e; }
+    .expiry     { color: #888; font-size: 14px; margin-top: 8px; }
+    .warning    { background: #fff8e1; border-left: 4px solid #f59e0b; padding: 12px 16px;
+                  border-radius: 4px; font-size: 13px; color: #92400e; margin-top: 24px; }
+    .footer     { background: #f8f8f8; padding: 24px; text-align: center; color: #aaa; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎟️ TicketFair</h1>
+    </div>
+    <div class="body">
+      <h2>Reset your password</h2>
+      <p>We received a request to reset your TicketFair password. Use the code below to proceed.</p>
+      <div class="code-box">
+        <div class="code">%s</div>
+        <div class="expiry">Expires in %s minutes</div>
+      </div>
+      <div class="warning">
+        If you did not request a password reset, ignore this email. Your password will not change.
+      </div>
+    </div>
+    <div class="footer">
+      &copy; 2026 TicketFair. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
+`, code, expiryMinutes),
+	}
+}

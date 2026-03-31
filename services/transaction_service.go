@@ -10,74 +10,71 @@ import (
 	"github.com/maycolacerda/ticketfair/models"
 )
 
-func PurchaseTicket(userID, eventID string, amount float64) (*dto.TransactionResponse, error) {
+func PurchaseTicket(userID, eventID, ticketTypeID string, quantity int, amount float64) (*dto.TransactionResponse, error) {
 	var transactionID string
 
 	err := database.DB.Raw(
-		`SELECT purchase_ticket(?, ?, ?)`,
-		userID, eventID, amount,
+		`SELECT purchase_ticket(?, ?, ?, ?, ?)`,
+		userID, eventID, ticketTypeID, quantity, amount,
 	).Scan(&transactionID).Error
 
 	if err != nil {
 		slog.Error("Ticket purchase failed",
 			"user_id", userID,
 			"event_id", eventID,
+			"ticket_type_id", ticketTypeID,
 			"error", err.Error(),
 		)
 		switch {
+		case containsError(err, "ticket_type_not_found"):
+			return nil, ErrTicketTypeNotFound
+		case containsError(err, "ticket_type_sold_out"):
+			return nil, ErrTicketTypeSoldOut
+		case containsError(err, "ticket_sale_not_started"):
+			return nil, ErrTicketSaleNotStarted
+		case containsError(err, "ticket_sale_ended"):
+			return nil, ErrTicketSaleEnded
+		case containsError(err, "ticket_below_minimum"):
+			return nil, ErrTicketBelowMinimum
+		case containsError(err, "ticket_exceeds_maximum"):
+			return nil, ErrTicketExceedsMaximum
 		case containsError(err, "event_not_found"):
 			return nil, ErrEventNotFound
-		case containsError(err, "event_sold_out"):
-			return nil, ErrEventSoldOut
 		default:
 			return nil, ErrFailedToCreate
 		}
 	}
 
-	// Create ticket record
-	ticket, ticketErr := CreateTicket(transactionID, userID, eventID)
-	if ticketErr != nil {
-		slog.Error("Failed to create ticket after purchase",
-			"transaction_id", transactionID,
-			"error", ticketErr.Error(),
-		)
-	}
+	// Fetch ticket type snapshot for denormalization
+	var tt models.TicketType
+	_ = database.DB.First(&tt, "ticket_type_id = ?", ticketTypeID).Error
 
-	// Send confirmation email — non-blocking
-	go func() {
-		var user models.User
-		var event models.Event
-
-		if err := database.DB.First(&user, "user_id = ?", userID).Error; err != nil {
-			return
+	// Create one ticket per quantity
+	for i := 0; i < quantity; i++ {
+		ticket := models.Ticket{
+			TransactionID:  transactionID,
+			UserID:         userID,
+			EventID:        eventID,
+			TicketTypeID:   ticketTypeID,
+			TicketTypeName: tt.Name,
+			PricePaidCents: tt.PriceCents,
+			Status:         "active",
 		}
-		if err := database.DB.First(&event, "event_id = ?", eventID).Error; err != nil {
-			return
-		}
-
-		ticketID := ""
-		if ticket != nil {
-			ticketID = ticket.TicketID
-		}
-
-		if err := SendPurchaseConfirmationEmail(
-			user.Email,
-			user.Username,
-			event.Name,
-			ticketID,
-			amount,
-		); err != nil {
-			slog.Error("Failed to send purchase confirmation email",
-				"user_id", userID,
+		if err := database.DB.Create(&ticket).Error; err != nil {
+			slog.Error("Failed to create ticket",
+				"transaction_id", transactionID,
+				"index", i,
 				"error", err.Error(),
 			)
 		}
-	}()
+	}
 
 	slog.Info("Purchase completed",
 		"transaction_id", transactionID,
 		"user_id", userID,
 		"event_id", eventID,
+		"ticket_type_id", ticketTypeID,
+		"quantity", quantity,
 	)
 
 	return GetTransactionByID(transactionID)

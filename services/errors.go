@@ -57,4 +57,19 @@ var (
 	ErrS3NotConfigured  = errors.New("image storage is not configured")
 	ErrImageTooLarge    = errors.New("image exceeds maximum size of 5MB")
 	ErrInvalidImageType = errors.New("only JPEG, PNG and WebP images are allowed")
+
+	//password recovery
+	ErrResetCodeNotFound = errors.New("reset code not found")
+	ErrResetCodeExpired  = errors.New("reset code has expired")
+	ErrResetCodeUsed     = errors.New("reset code already used")
+	ErrResetCodeInvalid  = errors.New("invalid reset code")
+
+	//ticket type
+	ErrTicketTypeNotFound   = errors.New("ticket type not found")
+	ErrTicketTypeSoldOut    = errors.New("ticket type is sold out")
+	ErrTicketSaleNotStarted = errors.New("ticket sales have not started yet")
+	ErrTicketSaleEnded      = errors.New("ticket sales have ended")
+	ErrTicketBelowMinimum   = errors.New("quantity is below the minimum per order")
+	ErrTicketExceedsMaximum = errors.New("quantity exceeds the maximum per order")
+	ErrTicketTypeHasSales   = errors.New("cannot delete ticket type with existing sales")
 )

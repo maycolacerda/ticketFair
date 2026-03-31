@@ -57,6 +57,14 @@ func setupPublicRoutes(rg *gin.RouterGroup) {
 				middlewares.RateLimit(middlewares.AuthRateLimit),
 				controllers.MerchantRepLogin,
 			)
+			auth.POST("/password/forgot",
+				middlewares.RateLimit(middlewares.VerifyRateLimit),
+				controllers.ForgotPassword,
+			)
+			auth.POST("/password/reset",
+				middlewares.RateLimit(middlewares.VerifyRateLimit),
+				controllers.ResetPassword,
+			)
 			auth.POST("/logout", controllers.Logout)
 		}
 

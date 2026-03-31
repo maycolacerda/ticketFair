@@ -75,7 +75,7 @@ services:
           --insecure \
           --host=ticketfair-db:26257
     restart: on-failure
-  
+
   caddy:
     image: caddy:latest
     restart: unless-stopped
@@ -83,11 +83,23 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
       - ticketfair-network
+    depends_on:
+      ticketfair-app:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
   localstack:
     image: localstack/localstack:latest
     ports:
@@ -101,8 +113,8 @@ services:
       - DEBUG=0
     volumes:
       - localstack_data:/var/lib/localstack
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init.sh:ro
     networks:
       - ticketfair-network
     healthcheck:
@@ -117,14 +129,21 @@ services:
         limits:
           cpus: "0.5"
           memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
   stripe-cli:
     image: stripe/stripe-cli:latest
-    command: >
-      listen
-      --api-key ${STRIPE_SECRET_KEY}
-      --device-name ${STRIPE_DEVICE_NAME:-ticketfair-local}
-      --forward-to ticketfair-app:8000/api/v1/public/webhooks/stripe
-      --skip-verify
+    command:
+      - listen
+      - --api-key
+      - ${STRIPE_SECRET_KEY}
+      - --device-name
+      - ${STRIPE_DEVICE_NAME:-ticketfair-local}
+      - --forward-to
+      - ticketfair-app:8000/api/v1/public/webhooks/stripe
+      - --skip-verify
     networks:
       - ticketfair-network
     environment:
@@ -133,21 +152,38 @@ services:
     depends_on:
       ticketfair-app:
         condition: service_healthy
-    restart: unless-stopped  
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
   dashboard:
     build:
       context: ./dashboard
     environment:
       - API_BASE=http://ticketfair-app:8000/api/v1
     ports:
-      - "3001:3001"           
+      - "3001:3001"
     networks:
       - ticketfair-network
     restart: unless-stopped
     depends_on:
       ticketfair-app:
         condition: service_healthy
-    
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
   loki:
     image: grafana/loki:latest
     volumes:
@@ -280,5 +316,5 @@ volumes:
     driver: local
   caddy_config:
     driver: local
-
-
+  localstack_data:
+    driver: local

@@ -5,11 +5,6 @@ import "time"
 
 // ── Create Payment Intent ──────────────────────────────
 
-type CreatePaymentIntentRequest struct {
-	EventID  string `json:"event_id"  validate:"required,uuid"`
-	Quantity int    `json:"quantity"   validate:"required,min=1,max=10"`
-}
-
 type CreatePaymentIntentResponse struct {
 	ClientSecret    string `json:"client_secret"`
 	PaymentIntentID string `json:"payment_intent_id"`
