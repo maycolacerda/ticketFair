@@ -129,20 +129,17 @@ ticketfair/
 │   ├── base_controller.go
 │   ├── basics_controller.go
 │   ├── events_controller.go
-│   ├── image_controller.go
+│   ├── images_controller.go
 │   ├── merchant_controller.go
 │   ├── merchant_rep_controller.go
+│   ├── password_reset_controller.go
 │   ├── payment_controller.go                     
 │   ├── profile_controller.go
 │   ├── ticket_controller.go
+│   ├── ticket_type_controller.go
 │   ├── transaction_controller.go
 │   ├── users_controller.go
 │   └── verification_controller.go
-├── dashboard/
-│   ├── Dockerfile
-│   ├── entrypoint.sh
-│   ├── index.html
-│   └── nginx.conf
 ├── database/
 │   └── db.go
 ├── dto/
@@ -152,9 +149,11 @@ ticketfair/
 │   ├── event_dto.go
 │   ├── merchant_dto.go
 │   ├── merchant_rep_dto.go
+│   ├── password_reset_dto.go
 │   ├── payment_dto.go                 
 │   ├── profile_dto.go
 │   ├── ticket_dto.go
+│   ├── ticket_type_dto.go
 │   ├── transaction_dto.go
 │   ├── user_dto.go
 │   ├── validators.go
@@ -175,9 +174,11 @@ ticketfair/
 │   ├── event_model.go
 │   ├── merchant_model.go
 │   ├── merchant_rep_model.go
+│   ├── password_reset_model.go
 │   ├── payment_model.go                     
 │   ├── profile_model.go
 │   ├── ticket_model.go
+│   ├── ticket_type_model.go
 │   ├── transaction_model.go
 │   ├── user_model.go
 │   └── verification_model.go
@@ -197,10 +198,12 @@ ticketfair/
 │   ├── merchant_rep_auth.go
 │   ├── merchant_rep_service.go
 │   ├── merchant_service.go
+│   ├── password_reset_service.go
 │   ├── payment_service.go             
 │   ├── profile_service.go
 │   ├── s3_service.go
 │   ├── ticket_service.go
+│   ├── ticket_type_service.go
 │   ├── token.go
 │   ├── transaction_service.go
 │   ├── user_service.go
