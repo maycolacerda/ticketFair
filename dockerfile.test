@@ -1,0 +1,23 @@
+# Dockerfile.test
+FROM golang:1.23-alpine
+
+RUN apk add --no-cache git curl
+
+WORKDIR /app
+
+# Copy dependency files first for layer caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Run all tests — unit + integration
+# -v verbose, -count=1 disables test caching, -timeout 120s safety net
+CMD ["go", "test", \
+     "-v", \
+     "-count=1", \
+     "-timeout=120s", \
+     "-coverprofile=/app/test-results/coverage.out", \
+     "./tests/...", \
+     "./controllers/..."]

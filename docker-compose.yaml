@@ -69,12 +69,11 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
-        sleep 5
         cat /migration/docker-database-init.sql | \
         /cockroach/cockroach sql \
           --insecure \
           --host=ticketfair-db:26257
-    restart: on-failure
+    restart: no
 
   caddy:
     image: caddy:latest
@@ -110,7 +109,9 @@ services:
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
       - HOSTNAME_EXTERNAL=localstack
+      - LOCALSTACK_AUTH_TOKEN = ${LOCALSTACK_AUTH_TOKEN}
       - DEBUG=0
+
     volumes:
       - localstack_data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -161,28 +162,6 @@ services:
         reservations:
           cpus: "0.1"
           memory: 64M
-
-  dashboard:
-    build:
-      context: ./dashboard
-    environment:
-      - API_BASE=http://ticketfair-app:8000/api/v1
-    ports:
-      - "3001:3001"
-    networks:
-      - ticketfair-network
-    restart: unless-stopped
-    depends_on:
-      ticketfair-app:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 256M
 
   loki:
     image: grafana/loki:latest

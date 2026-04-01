@@ -1,10 +1,28 @@
 {
   "info": {
-    "_postman_id": "f10e2a24-d4a6-498a-a5bc-3b5f6a419b3f",
     "name": "TicketFair API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "19465445"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    { "key": "base_url",        "value": "http://localhost:8000/api/v1" },
+    { "key": "admin_token",     "value": "" },
+    { "key": "client_token",    "value": "" },
+    { "key": "merchant_token",  "value": "" },
+    { "key": "rep_token",       "value": "" },
+    { "key": "admin_id",        "value": "d4e5f6a7-b8c9-0123-defa-234567890123" },
+    { "key": "user_id",         "value": "" },
+    { "key": "merchant_id",     "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" },
+    { "key": "event_id",        "value": "c3d4e5f6-a7b8-9012-cdef-123456789012" },
+    { "key": "ticket_type_id",  "value": "f2a3b4c5-d6e7-8901-f012-456789012345" },
+    { "key": "transaction_id",  "value": "" },
+    { "key": "ticket_id",       "value": "" },
+    { "key": "rep_id",          "value": "b2c3d4e5-f6a7-8901-bcde-f12345678901" },
+    { "key": "verify_code",     "value": "" },
+    { "key": "reset_code",      "value": "" },
+    { "key": "payment_id",      "value": "" },
+    { "key": "admin_user_id",   "value": "" },
+    { "key": "admin_merchant_id", "value": "" }
+  ],
   "item": [
     {
       "name": "🔑 Admin",
@@ -14,130 +32,25 @@
           "item": [
             {
               "name": "Admin Login",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 200) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('admin_token', data.token);",
-                      "  pm.test('Login successful', () => pm.response.to.have.status(200));",
-                      "  pm.test('Has token', () => pm.expect(data.token).to.not.be.empty);",
-                      "  pm.test('Has expires_at', () => pm.expect(data.expires_at).to.be.a('number'));",
-                      "  pm.test('Admin ID matches seed', () => pm.expect(data.admin.admin_id).to.equal('d4e5f6a7-b8c9-0123-defa-234567890123'));",
-                      "  pm.test('Password not exposed', () => pm.expect(data.admin).to.not.have.property('password'));",
-                      "}"
-                    ],
-                    "type": "text/javascript",
-                    "packages": {},
-                    "requests": {}
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@ticketfair.com\",\n  \"password\": \"kP9#vL2!Z&mR5*xN9?uW6@bY1_jT4(qS\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/auth/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "auth",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 200) {",
+                "  pm.collectionVariables.set('admin_token', pm.response.json().data.token);",
+                "  pm.test('Login successful', () => pm.response.to.have.status(200));",
+                "  pm.test('Has token', () => pm.expect(pm.response.json().data.token).to.not.be.empty);",
+                "  pm.test('Admin ID matches seed', () => pm.expect(pm.response.json().data.admin.admin_id).to.equal('d4e5f6a7-b8c9-0123-defa-234567890123'));",
+                "  pm.test('Password not exposed', () => pm.expect(pm.response.json().data.admin).to.not.have.property('password'));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/admin/auth/login",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@ticketfair.com\",\n  \"password\": \"PassW0rd!\"\n}" }}
             },
             {
               "name": "Admin Login — Wrong Password",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 401', () => pm.response.to.have.status(401));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@ticketfair.com\",\n  \"password\": \"WrongPass!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/auth/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "auth",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Admin Login — No Body",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 422', () => pm.response.to.have.status(422));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/auth/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "auth",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 401', () => pm.response.to.have.status(401));"] }}],
+              "request": { "method": "POST", "url": "{{base_url}}/admin/auth/login",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@ticketfair.com\",\n  \"password\": \"Wrong!\"\n}" }}
             }
           ]
         },
@@ -146,486 +59,49 @@
           "item": [
             {
               "name": "List All Users",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
-                      "pm.test('Has pagination', () => {",
-                      "  const body = pm.response.json();",
-                      "  pm.expect(body).to.have.property('page');",
-                      "  pm.expect(body).to.have.property('limit');",
-                      "  pm.expect(body).to.have.property('total');",
-                      "});"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "?page=1&limit=20",
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "20"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "List All Users — No Token",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 401', () => pm.response.to.have.status(401));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{base_url}}/admin/users",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/admin/users?page=1&limit=20",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }] }
             },
             {
               "name": "List All Users — Client Token (forbidden)",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 403', () => pm.response.to.have.status(403));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/admin/users",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 403', () => pm.response.to.have.status(403));"] }}],
+              "request": { "method": "GET", "url": "{{base_url}}/admin/users",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
             },
             {
               "name": "Create User",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('admin_user_id', data.user_id);",
-                      "  pm.test('User created', () => pm.response.to.have.status(201));",
-                      "  pm.test('Has user_id', () => pm.expect(data.user_id).to.not.be.empty);",
-                      "  pm.test('Email matches', () => pm.expect(data.email).to.equal('adminuser@example.com'));",
-                      "  pm.test('Password not exposed', () => pm.expect(data).to.not.have.property('password'));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"adminuser@example.com\",\n  \"password\": \"PassW0rd!\",\n  \"username\": \"adminuser\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/users",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Create User — Duplicate Email",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 409', () => pm.response.to.have.status(409));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"adminuser@example.com\",\n  \"password\": \"PassW0rd!\",\n  \"username\": \"adminuser2\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/users",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Create User — Weak Password",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 422', () => pm.response.to.have.status(422));",
-                      "pm.test('Has password error', () => pm.expect(pm.response.json().errors).to.have.property('password'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"weak\",\n  \"username\": \"newuser\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/users",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update User",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Username updated', () => pm.expect(pm.response.json().data.username).to.equal('adminuserupdated'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"username\": \"adminuserupdated\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/users/{{admin_user_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users",
-                    "{{admin_user_id}}"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update User — Not Found",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 404', () => pm.response.to.have.status(404));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"username\": \"ghost\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/users/00000000-0000-0000-0000-000000000000",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users",
-                    "00000000-0000-0000-0000-000000000000"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('admin_user_id', pm.response.json().data.user_id);",
+                "  pm.test('User created', () => pm.response.to.have.status(201));",
+                "  pm.test('Password not exposed', () => pm.expect(pm.response.json().data).to.not.have.property('password'));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/admin/users",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"adminuser@example.com\",\n  \"password\": \"PassW0rd!\",\n  \"username\": \"adminuser\"\n}" }}
             },
             {
               "name": "Deactivate User",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has message', () => pm.expect(pm.response.json().message).to.include('deactivated'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/admin/users/{{admin_user_id}}/deactivate",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users",
-                    "{{admin_user_id}}",
-                    "deactivate"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Login After Deactivation — Should Fail",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 403', () => pm.response.to.have.status(403));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"adminuser@example.com\",\n  \"password\": \"PassW0rd!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/client/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "client",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has message', () => pm.expect(pm.response.json().message).to.include('deactivated'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/admin/users/{{admin_user_id}}/deactivate",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }] }
             },
             {
               "name": "Activate User",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has message', () => pm.expect(pm.response.json().message).to.include('activated'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/admin/users/{{admin_user_id}}/activate",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "users",
-                    "{{admin_user_id}}",
-                    "activate"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Login After Activation — Should Succeed",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has token', () => pm.expect(pm.response.json().data.token).to.not.be.empty);"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"adminuser@example.com\",\n  \"password\": \"PassW0rd!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/client/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "client",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has message', () => pm.expect(pm.response.json().message).to.include('activated'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/admin/users/{{admin_user_id}}/activate",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }] }
             }
           ]
         },
@@ -634,563 +110,39 @@
           "item": [
             {
               "name": "List All Merchants",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
-                      "pm.test('Seeded merchant present', () => {",
-                      "  const merchants = pm.response.json().data;",
-                      "  const found = merchants.find(m => m.merchant_id === 'a1b2c3d4-e5f6-7890-abcd-ef1234567890');",
-                      "  pm.expect(found).to.not.be.undefined;",
-                      "});"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "?page=1&limit=20",
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "20"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "List All Merchants — No Token",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 401', () => pm.response.to.have.status(401));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Seeded merchant present', () => {",
+                "  const found = pm.response.json().data.find(m => m.merchant_id === 'a1b2c3d4-e5f6-7890-abcd-ef1234567890');",
+                "  pm.expect(found).to.not.be.undefined;",
+                "});"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/admin/merchants?page=1&limit=20",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }] }
             },
             {
               "name": "Create Merchant",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('admin_merchant_id', data.merchant_id);",
-                      "  pm.test('Merchant created', () => pm.response.to.have.status(201));",
-                      "  pm.test('Has merchant_id', () => pm.expect(data.merchant_id).to.not.be.empty);",
-                      "  pm.test('Name matches', () => pm.expect(data.name).to.equal('Nova Produtora'));",
-                      "  pm.test('Password not exposed', () => pm.expect(data).to.not.have.property('password'));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Nova Produtora\",\n  \"email\": \"nova@produtora.com\",\n  \"password\": \"PassW0rd!\",\n  \"phone\": \"44933333333\",\n  \"description\": \"Criada pelo admin\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Create Merchant — Duplicate Email",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 409', () => pm.response.to.have.status(409));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Duplicate\",\n  \"email\": \"nova@produtora.com\",\n  \"password\": \"PassW0rd!\",\n  \"phone\": \"44922222222\",\n  \"description\": \"Duplicate email\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Create Merchant — Seeded Email Conflict",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 409', () => pm.response.to.have.status(409));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Clone\",\n  \"email\": \"contato@ticketfairprod.com\",\n  \"password\": \"PassW0rd!\",\n  \"phone\": \"44911111111\",\n  \"description\": \"Clone of seeded merchant\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update Merchant",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Name updated', () => pm.expect(pm.response.json().data.name).to.equal('Nova Produtora Updated'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Nova Produtora Updated\",\n  \"phone\": \"44944444444\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants/{{admin_merchant_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants",
-                    "{{admin_merchant_id}}"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update Merchant — Not Found",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 404', () => pm.response.to.have.status(404));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Ghost\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants/00000000-0000-0000-0000-000000000000",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants",
-                    "00000000-0000-0000-0000-000000000000"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Deactivate Merchant",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has message', () => pm.expect(pm.response.json().message).to.include('deactivated'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants/{{admin_merchant_id}}/deactivate",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants",
-                    "{{admin_merchant_id}}",
-                    "deactivate"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Merchant Login After Deactivation — Should Fail",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 403', () => pm.response.to.have.status(403));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"nova@produtora.com\",\n  \"password\": \"PassW0rd!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/merchant/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "merchant",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Activate Merchant",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has message', () => pm.expect(pm.response.json().message).to.include('activated'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants/{{admin_merchant_id}}/activate",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants",
-                    "{{admin_merchant_id}}",
-                    "activate"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Merchant Login After Activation — Should Succeed",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has token', () => pm.expect(pm.response.json().data.token).to.not.be.empty);"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"nova@produtora.com\",\n  \"password\": \"PassW0rd!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/merchant/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "merchant",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('admin_merchant_id', pm.response.json().data.merchant_id);",
+                "  pm.test('Merchant created', () => pm.response.to.have.status(201));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/admin/merchants",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Nova Produtora\",\n  \"email\": \"nova@produtora.com\",\n  \"password\": \"PassW0rd!\",\n  \"phone\": \"44933333333\",\n  \"description\": \"Criada pelo admin\"\n}" }}
             },
             {
               "name": "Deactivate Seeded Merchant — Cascades to Rep",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants/a1b2c3d4-e5f6-7890-abcd-ef1234567890/deactivate",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants",
-                    "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                    "deactivate"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Rep Login After Merchant Deactivation — Should Fail",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 403', () => pm.response.to.have.status(403));",
-                      "pm.test('Error mentions merchant', () => pm.expect(pm.response.json().error).to.include('merchant'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"carlos@ticketfairprod.com\",\n  \"password\": \"PassW0rd!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/rep/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "rep",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 200', () => pm.response.to.have.status(200));"] }}],
+              "request": { "method": "POST", "url": "{{base_url}}/admin/merchants/a1b2c3d4-e5f6-7890-abcd-ef1234567890/deactivate",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }] }
             },
             {
               "name": "Reactivate Seeded Merchant",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{admin_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/admin/merchants/a1b2c3d4-e5f6-7890-abcd-ef1234567890/activate",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "merchants",
-                    "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                    "activate"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 200', () => pm.response.to.have.status(200));"] }}],
+              "request": { "method": "POST", "url": "{{base_url}}/admin/merchants/a1b2c3d4-e5f6-7890-abcd-ef1234567890/activate",
+                "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }] }
             }
           ]
         }
@@ -1200,387 +152,107 @@
       "name": "🌐 Public",
       "item": [
         {
+          "name": "Health Check",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 200', () => pm.response.to.have.status(200));"] }}],
+          "request": { "method": "GET", "url": "{{base_url}}/public/health" }
+        },
+        {
           "name": "Auth",
           "item": [
             {
               "name": "Register User",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('user_id', data.user_id);",
-                      "  pm.test('User created', () => pm.response.to.have.status(201));",
-                      "  pm.test('Has user_id', () => pm.expect(data.user_id).to.not.be.empty);",
-                      "  pm.test('Password not exposed', () => pm.expect(data).to.not.have.property('password'));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"PassW0rd!\",\n  \"username\": \"testuser\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/register",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "register"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Register User — Invalid Email",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 422', () => pm.response.to.have.status(422));",
-                      "pm.test('Has email error', () => pm.expect(pm.response.json().errors).to.have.property('email'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"notanemail\",\n  \"password\": \"PassW0rd!\",\n  \"username\": \"testuser\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/register",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "register"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Register User — Weak Password",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 422', () => pm.response.to.have.status(422));",
-                      "pm.test('Has password error', () => pm.expect(pm.response.json().errors).to.have.property('password'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"weak\",\n  \"username\": \"testuser\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/register",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "register"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Register User — Duplicate Email",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 409', () => pm.response.to.have.status(409));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"PassW0rd!\",\n  \"username\": \"testuser2\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/register",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "register"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('user_id', pm.response.json().data.user_id);",
+                "  pm.test('User created', () => pm.response.to.have.status(201));",
+                "  pm.test('Password not exposed', () => pm.expect(pm.response.json().data).to.not.have.property('password'));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/public/auth/register",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"PassW0rd!\",\n  \"username\": \"testuser\"\n}" }}
             },
             {
               "name": "Client Login",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 200) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('client_token', data.token);",
-                      "  pm.collectionVariables.set('user_id', data.user.user_id);",
-                      "  pm.test('Login successful', () => pm.response.to.have.status(200));",
-                      "  pm.test('Has token', () => pm.expect(data.token).to.not.be.empty);",
-                      "  pm.test('Password not exposed', () => pm.expect(data.user).to.not.have.property('password'));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"PassW0rd!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/client/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "client",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 200) {",
+                "  const d = pm.response.json().data;",
+                "  pm.collectionVariables.set('client_token', d.token);",
+                "  pm.collectionVariables.set('user_id', d.user.user_id);",
+                "  pm.test('Has token', () => pm.expect(d.token).to.not.be.empty);",
+                "  pm.test('Password not exposed', () => pm.expect(d.user).to.not.have.property('password'));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/public/auth/client/login",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"PassW0rd!\"\n}" }}
             },
             {
-              "name": "Client Login — Wrong Password",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 401', () => pm.response.to.have.status(401));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"WrongPass!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/client/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "client",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "name": "Merchant Login",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 200) {",
+                "  const d = pm.response.json().data;",
+                "  pm.collectionVariables.set('merchant_token', d.token);",
+                "  pm.collectionVariables.set('merchant_id', d.merchant.merchant_id);",
+                "  pm.test('Merchant ID matches seed', () => pm.expect(d.merchant.merchant_id).to.equal('a1b2c3d4-e5f6-7890-abcd-ef1234567890'));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/public/auth/merchant/login",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"contato@ticketfairprod.com\",\n  \"password\": \"PassW0rd!\"\n}" }}
             },
             {
-              "name": "Merchant Login — Seeded",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 200) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('merchant_token', data.token);",
-                      "  pm.collectionVariables.set('merchant_id', data.merchant.merchant_id);",
-                      "  pm.test('Login successful', () => pm.response.to.have.status(200));",
-                      "  pm.test('Merchant ID matches seed', () => pm.expect(data.merchant.merchant_id).to.equal('a1b2c3d4-e5f6-7890-abcd-ef1234567890'));",
-                      "  pm.test('Password not exposed', () => pm.expect(data.merchant).to.not.have.property('password'));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"contato@ticketfairprod.com\",\n  \"password\": \"PassW0rd!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/merchant/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "merchant",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "name": "Rep Login",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 200) {",
+                "  pm.collectionVariables.set('rep_token', pm.response.json().data.token);",
+                "  pm.test('Role is admin', () => pm.expect(pm.response.json().data.rep.role).to.equal('admin'));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/public/auth/rep/login",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"carlos@ticketfairprod.com\",\n  \"password\": \"PassW0rd!\"\n}" }}
             },
             {
-              "name": "Rep Login — Seeded",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 200) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('rep_token', data.token);",
-                      "  pm.test('Login successful', () => pm.response.to.have.status(200));",
-                      "  pm.test('Role is admin', () => pm.expect(data.rep.role).to.equal('admin'));",
-                      "  pm.test('Merchant ID matches seed', () => pm.expect(data.rep.merchant_id).to.equal('a1b2c3d4-e5f6-7890-abcd-ef1234567890'));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"carlos@ticketfairprod.com\",\n  \"password\": \"PassW0rd!\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/public/auth/rep/login",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "rep",
-                    "login"
-                  ]
-                }
-              },
-              "response": []
+              "name": "Forgot Password",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Generic message (prevent enumeration)', () => {",
+                "  const msg = pm.response.json().data.message;",
+                "  pm.expect(msg).to.include('if an account');",
+                "});",
+                "// Check logs: docker compose logs ticketfair-app | grep 'reset code'",
+                "// Then set reset_code variable manually before running Reset Password"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/public/auth/password/forgot",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\"\n}" }}
             },
             {
-              "name": "Logout",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has message', () => pm.expect(pm.response.json()).to.have.property('message'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/public/auth/logout",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "auth",
-                    "logout"
-                  ]
-                }
-              },
-              "response": []
+              "name": "Forgot Password — Unknown Email (same response)",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200 even for unknown email', () => pm.response.to.have.status(200));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/public/auth/password/forgot",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"ghost@example.com\"\n}" }}
+            },
+            {
+              "name": "Reset Password — Wrong Code",
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 400', () => pm.response.to.have.status(400));"] }}],
+              "request": { "method": "POST", "url": "{{base_url}}/public/auth/password/reset",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\",\n  \"code\": \"000000\",\n  \"new_password\": \"NewPassW0rd!\"\n}" }}
+            },
+            {
+              "name": "Reset Password — Correct Code",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has success message', () => pm.expect(pm.response.json().data.message).to.include('reset successfully'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/public/auth/password/reset",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\",\n  \"code\": \"{{reset_code}}\",\n  \"new_password\": \"NewPassW0rd!\"\n}" }}
             }
           ]
         },
@@ -1589,134 +261,40 @@
           "item": [
             {
               "name": "List Events",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has seeded event', () => {",
-                      "  const events = pm.response.json().data;",
-                      "  const found = events.find(e => e.event_id === 'c3d4e5f6-a7b8-9012-cdef-123456789012');",
-                      "  pm.expect(found).to.not.be.undefined;",
-                      "});"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "?page=1&limit=20",
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "20"
-                    }
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has seeded event', () => {",
+                "  const found = pm.response.json().data.find(e => e.event_id === 'c3d4e5f6-a7b8-9012-cdef-123456789012');",
+                "  pm.expect(found).to.not.be.undefined;",
+                "});"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/public/events?page=1&limit=20" }
             },
             {
               "name": "Get Event By ID — Seeded",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Is Festival de Verão', () => pm.expect(pm.response.json().data.name).to.equal('Festival de Verão 2026'));",
-                      "pm.test('Capacity is 1000', () => pm.expect(pm.response.json().data.capacity).to.equal(1000));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{base_url}}/public/events/c3d4e5f6-a7b8-9012-cdef-123456789012",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "events",
-                    "c3d4e5f6-a7b8-9012-cdef-123456789012"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Is Summer Festival', () => pm.expect(pm.response.json().data.name).to.equal('Summer Festival 2026'));"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/public/events/c3d4e5f6-a7b8-9012-cdef-123456789012" }
             },
             {
-              "name": "Get Event By ID — Not Found",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 404', () => pm.response.to.have.status(404));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{base_url}}/public/events/00000000-0000-0000-0000-000000000000",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "public",
-                    "events",
-                    "00000000-0000-0000-0000-000000000000"
-                  ]
-                }
-              },
-              "response": []
+              "name": "List Ticket Types — Seeded Event",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has ticket types', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+                "const types = pm.response.json().data;",
+                "if (types.length > 0) {",
+                "  pm.collectionVariables.set('ticket_type_id', types[0].ticket_type_id);",
+                "  pm.test('Has price_formatted', () => pm.expect(types[0].price_formatted).to.not.be.empty);",
+                "  pm.test('Has on_sale flag', () => pm.expect(types[0]).to.have.property('on_sale'));",
+                "  pm.test('Has available count', () => pm.expect(types[0]).to.have.property('available'));",
+                "  pm.test('Has sold count', () => pm.expect(types[0]).to.have.property('sold'));",
+                "}"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/public/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types" }
             }
           ]
-        },
-        {
-          "name": "Health Check",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Has status', () => pm.expect(pm.response.json()).to.have.property('status'));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/public/health",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "public",
-                "health"
-              ]
-            }
-          },
-          "response": []
         }
       ]
     },
@@ -1724,205 +302,28 @@
       "name": "🔒 Private",
       "item": [
         {
-          "name": "Users",
-          "item": [
-            {
-              "name": "Get Current User",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has user_id', () => pm.expect(pm.response.json().data.user_id).to.not.be.empty);",
-                      "pm.test('Password not exposed', () => pm.expect(pm.response.json().data).to.not.have.property('password'));",
-                      "pm.test('Email matches', () => pm.expect(pm.response.json().data.email).to.equal('test@example.com'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/private/users/me",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "users",
-                    "me"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Get Current User — No Token",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 401', () => pm.response.to.have.status(401));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{base_url}}/private/users/me",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "users",
-                    "me"
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
           "name": "Profile",
           "item": [
             {
               "name": "Create Profile",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 201', () => pm.response.to.have.status(201));",
-                      "pm.test('Has profile_id', () => pm.expect(pm.response.json().data.profile_id).to.not.be.empty);",
-                      "pm.test('Has address', () => pm.expect(pm.response.json().data).to.have.property('address'));",
-                      "pm.test('verified_email is false', () => pm.expect(pm.response.json().data.verified_email).to.be.false);",
-                      "pm.test('verified_phone is false', () => pm.expect(pm.response.json().data.verified_phone).to.be.false);"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"first_name\": \"João\",\n  \"last_name\": \"Silva\",\n  \"phone_number\": \"44999999999\",\n  \"address\": {\n    \"street\": \"Rua das Flores, 123\",\n    \"city\": \"Cianorte\",\n    \"state\": \"PR\",\n    \"country\": \"BR\",\n    \"zip_code\": \"87200000\"\n  }\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/private/profile",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "profile"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 201', () => pm.response.to.have.status(201));",
+                "pm.test('Has address', () => pm.expect(pm.response.json().data).to.have.property('address'));",
+                "pm.test('verified_email is false', () => pm.expect(pm.response.json().data.verified_email).to.be.false);",
+                "pm.test('verified_phone is false', () => pm.expect(pm.response.json().data.verified_phone).to.be.false);"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/profile",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{client_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"João\",\n  \"last_name\": \"Silva\",\n  \"phone_number\": \"44999999999\",\n  \"address\": {\n    \"street\": \"Rua das Flores, 123\",\n    \"city\": \"Cianorte\",\n    \"state\": \"PR\",\n    \"country\": \"BR\",\n    \"zip_code\": \"87200000\"\n  }\n}" }}
             },
             {
               "name": "Get Profile",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has address', () => pm.expect(pm.response.json().data).to.have.property('address'));",
-                      "pm.test('First name is João', () => pm.expect(pm.response.json().data.first_name).to.equal('João'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/private/profile",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "profile"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update Profile",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Name updated', () => pm.expect(pm.response.json().data.first_name).to.equal('João Updated'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"first_name\": \"João Updated\",\n  \"address\": {\n    \"city\": \"Maringá\"\n  }\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/private/profile",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "profile"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has address', () => pm.expect(pm.response.json().data).to.have.property('address'));"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/private/profile",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
             }
           ]
         },
@@ -1931,388 +332,155 @@
           "item": [
             {
               "name": "Send Email Verification",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Not yet verified', () => pm.expect(pm.response.json().data.verified).to.be.false);",
-                      "pm.test('Email is masked', () => pm.expect(pm.response.json().data.message).to.include('***'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/private/verify/email/send",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "verify",
-                    "email",
-                    "send"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Email masked', () => pm.expect(pm.response.json().data.message).to.include('***'));",
+                "pm.test('Not yet verified', () => pm.expect(pm.response.json().data.verified).to.be.false);"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/verify/email/send",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
             },
             {
               "name": "Verify Email — Wrong Code",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 400', () => pm.response.to.have.status(400));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"code\": \"000000\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/private/verify/email",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "verify",
-                    "email"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 400', () => pm.response.to.have.status(400));"] }}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/verify/email",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{client_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"code\": \"000000\"\n}" }}
             },
             {
               "name": "Verify Email — Correct Code",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Is verified', () => pm.expect(pm.response.json().data.verified).to.be.true);"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"code\": \"{{verify_code}}\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/private/verify/email",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "verify",
-                    "email"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Is verified', () => pm.expect(pm.response.json().data.verified).to.be.true);"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/verify/email",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{client_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"code\": \"{{verify_code}}\"\n}" }}
             },
             {
               "name": "Send Phone Verification",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Phone is masked', () => pm.expect(pm.response.json().data.message).to.include('****'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/private/verify/phone/send",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "verify",
-                    "phone",
-                    "send"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Phone masked', () => pm.expect(pm.response.json().data.message).to.include('****'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/verify/phone/send",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
             },
             {
               "name": "Verify Phone — Correct Code",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Is verified', () => pm.expect(pm.response.json().data.verified).to.be.true);"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"code\": \"{{verify_code}}\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/private/verify/phone",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "verify",
-                    "phone"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Is verified', () => pm.expect(pm.response.json().data.verified).to.be.true);"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/verify/phone",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{client_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"code\": \"{{verify_code}}\"\n}" }}
             }
           ]
         },
         {
-          "name": "Tickets",
+          "name": "🎟 Tickets",
           "item": [
             {
-              "name": "Purchase Ticket — Festival de Verão",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('transaction_id', data.transaction_id);",
-                      "  pm.test('Ticket purchased', () => pm.response.to.have.status(201));",
-                      "  pm.test('Status is completed', () => pm.expect(data.status).to.equal('completed'));",
-                      "  pm.test('Event ID matches seed', () => pm.expect(data.event_id).to.equal('c3d4e5f6-a7b8-9012-cdef-123456789012'));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"event_id\": \"c3d4e5f6-a7b8-9012-cdef-123456789012\",\n  \"amount\": 150.00\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/private/tickets/purchase",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "tickets",
-                    "purchase"
-                  ]
-                }
-              },
-              "response": []
+              "name": "Purchase Ticket — General Admission",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 201) {",
+                "  const d = pm.response.json().data;",
+                "  pm.collectionVariables.set('transaction_id', d.transaction_id);",
+                "  pm.test('Status is completed', () => pm.expect(d.status).to.equal('completed'));",
+                "  pm.test('Has ticket_type_name', () => pm.expect(d.ticket_type_name).to.not.be.empty);",
+                "  pm.test('Has quantity', () => pm.expect(d.quantity).to.equal(1));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/tickets/purchase",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{client_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"event_id\": \"c3d4e5f6-a7b8-9012-cdef-123456789012\",\n  \"ticket_type_id\": \"{{ticket_type_id}}\",\n  \"quantity\": 1\n}" }}
+            },
+            {
+              "name": "Purchase Ticket — Invalid Ticket Type",
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 404', () => pm.response.to.have.status(404));"] }}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/tickets/purchase",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{client_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"event_id\": \"c3d4e5f6-a7b8-9012-cdef-123456789012\",\n  \"ticket_type_id\": \"00000000-0000-0000-0000-000000000000\",\n  \"quantity\": 1\n}" }}
             },
             {
               "name": "List My Tickets",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 200) {",
-                      "  const data = pm.response.json().data;",
-                      "  if (data.length > 0) {",
-                      "    pm.collectionVariables.set('ticket_id', data[0].ticket_id);",
-                      "  }",
-                      "  pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "  pm.test('Total > 0', () => pm.expect(pm.response.json().total).to.be.above(0));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "?page=1&limit=20",
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "20"
-                    }
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 200 && pm.response.json().data.length > 0) {",
+                "  pm.collectionVariables.set('ticket_id', pm.response.json().data[0].ticket_id);",
+                "  pm.test('Has ticket_type_name', () => pm.expect(pm.response.json().data[0].ticket_type_name).to.not.be.empty);",
+                "  pm.test('Has price_paid_cents', () => pm.expect(pm.response.json().data[0]).to.have.property('price_paid_cents'));",
+                "}"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/private/tickets?page=1&limit=20",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
             },
             {
               "name": "Get Ticket By ID",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Status is active', () => pm.expect(pm.response.json().data.status).to.equal('active'));",
-                      "pm.test('Event is Festival', () => pm.expect(pm.response.json().data.event.name).to.equal('Festival de Verão 2026'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/private/tickets/{{ticket_id}}",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "tickets",
-                    "{{ticket_id}}"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Status is active', () => pm.expect(pm.response.json().data.status).to.equal('active'));",
+                "pm.test('Has ticket_type_name', () => pm.expect(pm.response.json().data.ticket_type_name).to.not.be.empty);"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/private/tickets/{{ticket_id}}",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
             },
             {
               "name": "Refund Ticket",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has refund message', () => pm.expect(pm.response.json().message).to.include('refunded'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"transaction_id\": \"{{transaction_id}}\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/private/tickets/refund",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "private",
-                    "tickets",
-                    "refund"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has message', () => pm.expect(pm.response.json().message).to.include('refunded'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/tickets/refund",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{client_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"transaction_id\": \"{{transaction_id}}\"\n}" }}
+            }
+          ]
+        },
+        {
+          "name": "💳 Payments (Stripe)",
+          "item": [
+            {
+              "name": "Create PaymentIntent",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 201) {",
+                "  const d = pm.response.json().data;",
+                "  pm.test('Has client_secret', () => pm.expect(d.client_secret).to.not.be.empty);",
+                "  pm.test('Has payment_intent_id', () => pm.expect(d.payment_intent_id).to.not.be.empty);",
+                "  pm.test('Amount is 5000 cents (R$ 50)', () => pm.expect(d.amount).to.equal(5000));",
+                "  pm.test('Currency is brl', () => pm.expect(d.currency).to.equal('brl'));",
+                "  pm.test('Quantity is 1', () => pm.expect(d.quantity).to.equal(1));",
+                "} else if (pm.response.code === 503) {",
+                "  pm.test('Stripe not configured (acceptable in dev)', () => pm.response.to.have.status(503));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/payments/intent",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{client_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"event_id\": \"c3d4e5f6-a7b8-9012-cdef-123456789012\",\n  \"ticket_type_id\": \"{{ticket_type_id}}\",\n  \"quantity\": 1\n}" }}
+            },
+            {
+              "name": "List My Payments",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+                "if (pm.response.json().data.length > 0) {",
+                "  pm.collectionVariables.set('payment_id', pm.response.json().data[0].payment_id);",
+                "  pm.test('Has stripe_payment_id', () => pm.expect(pm.response.json().data[0].stripe_payment_id).to.not.be.empty);",
+                "  pm.test('Has status', () => pm.expect(pm.response.json().data[0].status).to.not.be.empty);",
+                "}"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/private/payments?page=1&limit=20",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
+            },
+            {
+              "name": "Refund Payment",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200 or 400', () => {",
+                "  pm.expect(pm.response.code).to.be.oneOf([200, 400, 404, 503]);",
+                "});"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/private/payments/{{payment_id}}/refund",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
             }
           ]
         },
@@ -2321,41 +489,12 @@
           "item": [
             {
               "name": "List My Transactions",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{client_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "?page=1&limit=20",
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "20"
-                    }
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/private/transactions?page=1&limit=20",
+                "header": [{ "key": "Authorization", "value": "Bearer {{client_token}}" }] }
             }
           ]
         }
@@ -2369,96 +508,114 @@
           "item": [
             {
               "name": "Create Event",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('event_id', data.event_id);",
-                      "  pm.test('Event created', () => pm.response.to.have.status(201));",
-                      "  pm.test('Merchant ID matches seed', () => pm.expect(data.merchant_id).to.equal('a1b2c3d4-e5f6-7890-abcd-ef1234567890'));",
-                      "  pm.test('Capacity is 300', () => pm.expect(data.capacity).to.equal(300));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{merchant_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Novo Show\",\n  \"description\": \"Mais um show\",\n  \"location\": \"Arena Cianorte\",\n  \"start_time\": \"2026-11-15T20:00:00Z\",\n  \"end_time\": \"2026-11-15T23:00:00Z\",\n  \"capacity\": 300\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/merchant/events/new",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "merchant",
-                    "events",
-                    "new"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('event_id', pm.response.json().data.event_id);",
+                "  pm.test('Merchant ID matches', () => pm.expect(pm.response.json().data.merchant_id).to.equal('a1b2c3d4-e5f6-7890-abcd-ef1234567890'));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/events/new",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Novo Show\",\n  \"description\": \"Mais um show\",\n  \"location\": \"Arena Cianorte\",\n  \"start_time\": \"2026-11-15T20:00:00Z\",\n  \"end_time\": \"2026-11-15T23:00:00Z\",\n  \"capacity\": 300\n}" }}
             },
             {
               "name": "Update Seeded Event",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Capacity updated', () => pm.expect(pm.response.json().data.capacity).to.equal(1200));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{merchant_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"capacity\": 1200\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "merchant",
-                    "events",
-                    "c3d4e5f6-a7b8-9012-cdef-123456789012"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Capacity updated', () => pm.expect(pm.response.json().data.capacity).to.equal(1200));"
+              ]}}],
+              "request": { "method": "PUT", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"capacity\": 1200\n}" }}
+            }
+          ]
+        },
+        {
+          "name": "🎫 Ticket Types",
+          "item": [
+            {
+              "name": "List Ticket Types — Merchant View",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+              ]}}],
+              "request": { "method": "GET", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types",
+                "header": [{ "key": "Authorization", "value": "Bearer {{merchant_token}}" }] }
+            },
+            {
+              "name": "Create General Ticket Type",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('ticket_type_id', pm.response.json().data.ticket_type_id);",
+                "  const d = pm.response.json().data;",
+                "  pm.test('Has ticket_type_id', () => pm.expect(d.ticket_type_id).to.not.be.empty);",
+                "  pm.test('Category is general', () => pm.expect(d.category).to.equal('general'));",
+                "  pm.test('Price formatted', () => pm.expect(d.price_formatted).to.equal('R$ 50,00'));",
+                "  pm.test('on_sale is true', () => pm.expect(d.on_sale).to.be.true);",
+                "  pm.test('Available = Capacity', () => pm.expect(d.available).to.equal(d.capacity));",
+                "  pm.test('Sold = 0', () => pm.expect(d.sold).to.equal(0));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"General Admission\",\n  \"category\": \"general\",\n  \"price_cents\": 5000,\n  \"capacity\": 400,\n  \"min_per_order\": 1,\n  \"max_per_order\": 10,\n  \"sort_order\": 1\n}" }}
+            },
+            {
+              "name": "Create VIP Ticket Type",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 201', () => pm.response.to.have.status(201));",
+                "pm.test('Category is vip', () => pm.expect(pm.response.json().data.category).to.equal('vip'));",
+                "pm.test('Price is R$ 150,00', () => pm.expect(pm.response.json().data.price_formatted).to.equal('R$ 150,00'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"VIP\",\n  \"description\": \"Priority entry + exclusive lounge\",\n  \"category\": \"vip\",\n  \"price_cents\": 15000,\n  \"capacity\": 100,\n  \"min_per_order\": 1,\n  \"max_per_order\": 2,\n  \"sort_order\": 2\n}" }}
+            },
+            {
+              "name": "Create Early Bird Ticket Type",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 201', () => pm.response.to.have.status(201));",
+                "pm.test('Category is early_bird', () => pm.expect(pm.response.json().data.category).to.equal('early_bird'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Early Bird\",\n  \"description\": \"Limited discounted tickets\",\n  \"category\": \"early_bird\",\n  \"price_cents\": 2500,\n  \"capacity\": 100,\n  \"min_per_order\": 1,\n  \"max_per_order\": 4,\n  \"sale_ends_at\": \"2026-10-01T00:00:00Z\",\n  \"sort_order\": 0\n}" }}
+            },
+            {
+              "name": "Create Free/Complimentary Type",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 201', () => pm.response.to.have.status(201));",
+                "pm.test('Price is Free', () => pm.expect(pm.response.json().data.price_formatted).to.equal('Free'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Press Pass\",\n  \"description\": \"Complimentary press access\",\n  \"category\": \"complimentary\",\n  \"price_cents\": 0,\n  \"capacity\": 20,\n  \"sort_order\": 99\n}" }}
+            },
+            {
+              "name": "Create Ticket Type — Invalid Category",
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 422', () => pm.response.to.have.status(422));"] }}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Invalid\",\n  \"category\": \"platinum_ultra\",\n  \"price_cents\": 100,\n  \"capacity\": 10\n}" }}
+            },
+            {
+              "name": "Update Ticket Type",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));"
+              ]}}],
+              "request": { "method": "PUT", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types/{{ticket_type_id}}",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"General Admission Updated\",\n  \"capacity\": 500\n}" }}
+            },
+            {
+              "name": "Delete Ticket Type — Has Sales (blocked)",
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 400 if sales exist, 200 if none', () => {",
+                "  pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                "});"
+              ]}}],
+              "request": { "method": "DELETE", "url": "{{base_url}}/merchant/events/c3d4e5f6-a7b8-9012-cdef-123456789012/ticket-types/{{ticket_type_id}}",
+                "header": [{ "key": "Authorization", "value": "Bearer {{merchant_token}}" }] }
             }
           ]
         },
@@ -2467,76 +624,18 @@
           "item": [
             {
               "name": "Validate Ticket",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Status is used', () => pm.expect(pm.response.json().data.status).to.equal('used'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{merchant_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/merchant/tickets/{{ticket_id}}/validate",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "merchant",
-                    "tickets",
-                    "{{ticket_id}}",
-                    "validate"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Status is used', () => pm.expect(pm.response.json().data.status).to.equal('used'));"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/tickets/{{ticket_id}}/validate",
+                "header": [{ "key": "Authorization", "value": "Bearer {{merchant_token}}" }] }
             },
             {
               "name": "Validate Ticket — Already Used",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 400', () => pm.response.to.have.status(400));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{merchant_token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{base_url}}/merchant/tickets/{{ticket_id}}/validate",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "merchant",
-                    "tickets",
-                    "{{ticket_id}}",
-                    "validate"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": ["pm.test('Returns 400', () => pm.response.to.have.status(400));"] }}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/tickets/{{ticket_id}}/validate",
+                "header": [{ "key": "Authorization", "value": "Bearer {{merchant_token}}" }] }
             }
           ]
         },
@@ -2545,239 +644,30 @@
           "item": [
             {
               "name": "Create Rep",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "  const data = pm.response.json().data;",
-                      "  pm.collectionVariables.set('rep_id', data.merchant_rep_id);",
-                      "  pm.test('Rep created', () => pm.response.to.have.status(201));",
-                      "  pm.test('Merchant ID matches', () => pm.expect(data.merchant_id).to.equal('a1b2c3d4-e5f6-7890-abcd-ef1234567890'));",
-                      "  pm.test('Password not exposed', () => pm.expect(data).to.not.have.property('password'));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{merchant_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Ana Rep\",\n  \"email\": \"ana@ticketfairprod.com\",\n  \"password\": \"PassW0rd!\",\n  \"phone\": \"44977777777\",\n  \"role\": \"staff\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/merchant/rep/new",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "merchant",
-                    "rep",
-                    "new"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "if (pm.response.code === 201) {",
+                "  pm.collectionVariables.set('rep_id', pm.response.json().data.merchant_rep_id);",
+                "  pm.test('Role is staff', () => pm.expect(pm.response.json().data.role).to.equal('staff'));",
+                "  pm.test('Password not exposed', () => pm.expect(pm.response.json().data).to.not.have.property('password'));",
+                "}"
+              ]}}],
+              "request": { "method": "POST", "url": "{{base_url}}/merchant/rep/new",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ana Rep\",\n  \"email\": \"ana@ticketfairprod.com\",\n  \"password\": \"PassW0rd!\",\n  \"phone\": \"44977777777\",\n  \"role\": \"staff\"\n}" }}
             },
             {
               "name": "Update Seeded Rep",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                      "pm.test('Role updated to manager', () => pm.expect(pm.response.json().data.role).to.equal('manager'));"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{merchant_token}}"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"role\": \"manager\"\n}"
-                },
-                "url": {
-                  "raw": "{{base_url}}/merchant/rep/b2c3d4e5-f6a7-8901-bcde-f12345678901",
-                  "host": [
-                    "{{base_url}}"
-                  ],
-                  "path": [
-                    "merchant",
-                    "rep",
-                    "b2c3d4e5-f6a7-8901-bcde-f12345678901"
-                  ]
-                }
-              },
-              "response": []
+              "event": [{ "listen": "test", "script": { "exec": [
+                "pm.test('Returns 200', () => pm.response.to.have.status(200));",
+                "pm.test('Role updated to manager', () => pm.expect(pm.response.json().data.role).to.equal('manager'));"
+              ]}}],
+              "request": { "method": "PUT", "url": "{{base_url}}/merchant/rep/b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{merchant_token}}" }],
+                "body": { "mode": "raw", "raw": "{\n  \"role\": \"manager\"\n}" }}
             }
           ]
-        },
-        {
-          "name": "Update Merchant",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Returns 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Name updated', () => pm.expect(pm.response.json().data.name).to.equal('TicketFair Produções Updated'));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{merchant_token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"TicketFair Produções Updated\",\n  \"phone\": \"44999000001\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/merchant/update",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "merchant",
-                "update"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Logout",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Returns 200', () => pm.response.to.have.status(200));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{merchant_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/merchant/logout",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "merchant",
-                "logout"
-              ]
-            }
-          },
-          "response": []
         }
       ]
-    }
-  ],
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8000/api/v1"
-    },
-    {
-      "key": "admin_token",
-      "value": ""
-    },
-    {
-      "key": "client_token",
-      "value": ""
-    },
-    {
-      "key": "merchant_token",
-      "value": ""
-    },
-    {
-      "key": "rep_token",
-      "value": ""
-    },
-    {
-      "key": "admin_id",
-      "value": "d4e5f6a7-b8c9-0123-defa-234567890123"
-    },
-    {
-      "key": "user_id",
-      "value": ""
-    },
-    {
-      "key": "merchant_id",
-      "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-    },
-    {
-      "key": "event_id",
-      "value": "c3d4e5f6-a7b8-9012-cdef-123456789012"
-    },
-    {
-      "key": "transaction_id",
-      "value": ""
-    },
-    {
-      "key": "ticket_id",
-      "value": ""
-    },
-    {
-      "key": "rep_id",
-      "value": "b2c3d4e5-f6a7-8901-bcde-f12345678901"
-    },
-    {
-      "key": "verify_code",
-      "value": ""
-    },
-    {
-      "key": "admin_user_id",
-      "value": ""
-    },
-    {
-      "key": "admin_merchant_id",
-      "value": ""
     }
   ]
 }

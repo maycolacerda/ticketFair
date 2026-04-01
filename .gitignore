@@ -4,5 +4,7 @@ todo.md
 ./graphql
 ./dashboard
 ./frontend
+./tests
 *.exe
 notes.txt
+makefile

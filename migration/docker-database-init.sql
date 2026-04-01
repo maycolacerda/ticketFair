@@ -107,20 +107,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     CONSTRAINT chk_transaction_status CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
     CONSTRAINT chk_transaction_amount CHECK (amount > 0)
 );
-CREATE TABLE IF NOT EXISTS tickets (
-    ticket_id      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    transaction_id UUID        NOT NULL REFERENCES transactions(transaction_id) ON DELETE RESTRICT,
-    user_id        UUID        NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
-    event_id       UUID        NOT NULL REFERENCES events(event_id) ON DELETE RESTRICT,
-    ticket_type_id UUID REFERENCES ticket_types(ticket_type_id) ON DELETE RESTRICT,
-    ticket_type_name VARCHAR(100),
-    price_paid_cents BIGINT NOT NULL DEFAULT 0,
-    status         VARCHAR(20) NOT NULL DEFAULT 'active',
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at     TIMESTAMPTZ,
-    CONSTRAINT chk_ticket_status CHECK (status IN ('active', 'used', 'refunded', 'cancelled'))
-);
 
 CREATE TABLE IF NOT EXISTS ticket_types (
     ticket_type_id  UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -161,6 +147,22 @@ CREATE TABLE IF NOT EXISTS ticket_types (
         sale_ends_at IS NULL OR sale_starts_at IS NULL OR sale_ends_at > sale_starts_at
     )
 );
+
+CREATE TABLE IF NOT EXISTS tickets (
+    ticket_id      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID        NOT NULL REFERENCES transactions(transaction_id) ON DELETE RESTRICT,
+    user_id        UUID        NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+    event_id       UUID        NOT NULL REFERENCES events(event_id) ON DELETE RESTRICT,
+    ticket_type_id UUID REFERENCES ticket_types(ticket_type_id) ON DELETE RESTRICT,
+    ticket_type_name VARCHAR(100),
+    price_paid_cents BIGINT NOT NULL DEFAULT 0,
+    status         VARCHAR(20) NOT NULL DEFAULT 'active',
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at     TIMESTAMPTZ,
+    CONSTRAINT chk_ticket_status CHECK (status IN ('active', 'used', 'refunded', 'cancelled'))
+);
+
 
 CREATE TABLE IF NOT EXISTS payments (
     payment_id        UUID          PRIMARY KEY DEFAULT gen_random_uuid(),

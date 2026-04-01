@@ -1,0 +1,69 @@
+# docker-compose.test.yml
+# Run with: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+# Exit code mirrors the test container exit code.
+
+services:
+
+  # ── TEST DATABASE ─────────────────────────────────
+  # Separate from the dev DB — runs on port 26258
+  test-db:
+    image: cockroachdb/cockroach:latest
+    command: start-single-node --insecure --listen-addr=0.0.0.0:26257 --http-addr=0.0.0.0:8080
+    ports:
+      - "26258:26257"
+      - "8082:8080"
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    tmpfs:
+      - /cockroach/cockroach-data   # in-memory — wiped on restart
+
+  # ── CREATE TEST DATABASE ──────────────────────────
+  test-db-init:
+    image: cockroachdb/cockroach:latest
+    networks:
+      - test-network
+    depends_on:
+      test-db:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        /cockroach/cockroach sql \
+          --insecure \
+          --host=test-db:26257 \
+          --execute="CREATE DATABASE IF NOT EXISTS ticketfair_test;"
+        echo "Test database created."
+    restart: on-failure
+
+  # ── TEST RUNNER ───────────────────────────────────
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    networks:
+      - test-network
+    environment:
+      - JWT_SECRET=test_secret_key_for_integration_tests_only
+      - TEST_DB_HOST=test-db
+      - TEST_DB_PORT=26257
+      - TEST_DB_USER=root
+      - TEST_DB_NAME=ticketfair_test
+      - GIN_MODE=test
+    depends_on:
+      test-db-init:
+        condition: service_completed_successfully
+    volumes:
+      - test-results:/app/test-results
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  test-results:
