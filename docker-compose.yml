@@ -69,11 +69,12 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
+        sleep 5
         cat /migration/docker-database-init.sql | \
         /cockroach/cockroach sql \
           --insecure \
           --host=ticketfair-db:26257
-    restart: no
+    restart: on-failure
 
   caddy:
     image: caddy:latest
@@ -109,9 +110,8 @@ services:
       - DEFAULT_REGION=us-east-1
       - AWS_DEFAULT_REGION=us-east-1
       - HOSTNAME_EXTERNAL=localstack
-      - LOCALSTACK_AUTH_TOKEN = ${LOCALSTACK_AUTH_TOKEN}
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
       - DEBUG=0
-
     volumes:
       - localstack_data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock:ro

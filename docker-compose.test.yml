@@ -1,0 +1,54 @@
+# docker-compose.test.yml
+# Run with: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+# Exit code mirrors the test container exit code.
+
+services:
+
+  # ── TEST DATABASE ─────────────────────────────────
+  # PostgreSQL for testing (simpler than CockroachDB v26 insecure mode)
+  test-db:
+    image: postgres:16-alpine
+    pull_policy: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: ticketfair_test
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "root", "-d", "ticketfair_test"]
+      interval: 5s
+      timeout: 10s
+      retries: 15
+      start_period: 10s
+    tmpfs:
+      - /var/lib/postgresql/data   # in-memory — wiped on restart
+
+  # ── TEST RUNNER ───────────────────────────────────
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    pull_policy: build
+    networks:
+      - test-network
+    environment:
+      - JWT_SECRET=test_secret_key_for_integration_tests_only
+      - TEST_DB_HOST=test-db
+      - TEST_DB_PORT=5432
+      - TEST_DB_USER=root
+      - TEST_DB_PASSWORD=test_password
+      - TEST_DB_NAME=ticketfair_test
+      - GIN_MODE=test
+    depends_on:
+      test-db:
+        condition: service_healthy
+    volumes:
+      - test-results:/app/test-results
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  test-results:
