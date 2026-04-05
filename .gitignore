@@ -3,7 +3,7 @@ users.txt
 todo.md
 ./graphql
 ./dashboard
-./frontend
+./ticketfair-react
 ./tests
 *.exe
 notes.txt

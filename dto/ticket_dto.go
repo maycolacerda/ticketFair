@@ -12,6 +12,10 @@ type TicketResponse struct {
 	TicketTypeName string         `json:"ticket_type_name"`
 	PricePaidCents int64          `json:"price_paid_cents"`
 	Status         string         `json:"status"`
+	IsGift         bool           `json:"is_gift"`
+	GiftedBy       string         `json:"gifted_by,omitempty"`
+	GiftedAt       *time.Time     `json:"gifted_at,omitempty"`
+	GiftMessage    string         `json:"gift_message,omitempty"`
 	Event          *EventResponse `json:"event,omitempty"`
 	CreatedAt      time.Time      `json:"created_at"`
 }

@@ -17,6 +17,11 @@ services:
       start_period: 10s
     env_file:
       - .env
+    environment:
+      - COCKROACH_USER=root
+      - COCKROACH_DB=ticketfair
+      - DB_HOST=ticketfair-db
+      - DB_PORT=26257
     depends_on:
       ticketfair-db-init:
         condition: service_completed_successfully
@@ -33,7 +38,8 @@ services:
     image: cockroachdb/cockroach:latest
     command: start-single-node --insecure
     environment:
-      COCKROACH_DATABASE: ticketfair
+      COCKROACH_DATABASE: ${COCKROACH_DATABASE}
+      COCKROACH_USER: ${COCKROACH_USER}
     restart: unless-stopped
     volumes:
       - ticketfair_db-data:/cockroach/cockroach-data
@@ -75,6 +81,19 @@ services:
           --insecure \
           --host=ticketfair-db:26257
     restart: on-failure
+
+  frontend:
+    build:
+      context: ./ticketfair-react
+      args:
+        VITE_API_URL: http://localhost:8000/api/v1
+    ports:
+    - "3002:3002"
+    networks:
+    - ticketfair-network
+    depends_on:
+      ticketfair-app:
+        condition: service_healthy
 
   caddy:
     image: caddy:latest

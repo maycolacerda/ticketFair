@@ -72,4 +72,13 @@ var (
 	ErrTicketBelowMinimum   = errors.New("quantity is below the minimum per order")
 	ErrTicketExceedsMaximum = errors.New("quantity exceeds the maximum per order")
 	ErrTicketTypeHasSales   = errors.New("cannot delete ticket type with existing sales")
+
+	ErrConnectionNotFound   = errors.New("connection not found")
+	ErrConnectionExists     = errors.New("connection already exists")
+	ErrConnectionSelf       = errors.New("cannot connect with yourself")
+	ErrNotConnected         = errors.New("users are not connected")
+	ErrConnectionNotPending = errors.New("connection is not pending")
+	ErrTicketAlreadyGifted  = errors.New("ticket has already been gifted")
+	ErrCannotGiftOwn        = errors.New("cannot gift a ticket to yourself")
+	ErrTicketNotActive      = errors.New("ticket is not active")
 )

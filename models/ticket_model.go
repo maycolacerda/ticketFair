@@ -19,9 +19,14 @@ type Ticket struct {
 	CreatedAt      time.Time      `json:"created_at"     gorm:"autoCreateTime"`
 	UpdatedAt      time.Time      `json:"updated_at"     gorm:"autoUpdateTime"`
 	DeletedAt      gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
+	IsGift         bool           `json:"is_gift"      gorm:"default:false"`
+	GiftedBy       string         `json:"gifted_by"    gorm:"index"`
+	GiftedAt       *time.Time     `json:"gifted_at"    gorm:"default:null"`
+	GiftMessage    string         `json:"gift_message" gorm:"type:text"`
 
 	// Relationships
 	User       *User       `json:"user,omitempty"        gorm:"foreignKey:UserID"`
 	Event      *Event      `json:"event,omitempty"       gorm:"foreignKey:EventID"`
 	TicketType *TicketType `json:"ticket_type,omitempty" gorm:"foreignKey:TicketTypeID"`
+	Sender     *User       `json:"sender,omitempty" gorm:"foreignKey:GiftedBy"`
 }

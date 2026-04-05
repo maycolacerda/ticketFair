@@ -3,7 +3,9 @@ package routes
 
 import (
 	"io"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/maycolacerda/ticketfair/controllers"
 	"github.com/maycolacerda/ticketfair/middlewares"
@@ -18,7 +20,17 @@ func HandleRequests() {
 
 	r := gin.Default()
 
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3002"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	r.GET("/", controllers.GetHome)
+	r.GET("/api/v1", controllers.GetHome)
 	r.NoRoute(controllers.NotFound)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -139,6 +151,7 @@ func setupPrivateRoutes(rg *gin.RouterGroup) {
 			tickets.GET("/:id", controllers.GetTicketByID)
 			tickets.POST("/purchase", controllers.PurchaseTicket)
 			tickets.POST("/refund", controllers.RefundTicket)
+			tickets.POST("/:id/gift", controllers.GiftTicket)
 		}
 
 		transactions := private.Group("/transactions")
@@ -152,6 +165,16 @@ func setupPrivateRoutes(rg *gin.RouterGroup) {
 			payments.POST("/intent", controllers.CreatePaymentIntent)
 			payments.POST("/:id/refund", controllers.RefundPayment)
 		}
+		connections := private.Group("/connections")
+		{
+			connections.GET("/", controllers.ListConnections)
+			connections.POST("/", controllers.SendConnectionRequest)
+			connections.GET("/requests", controllers.ListPendingRequests)
+			connections.GET("/events", controllers.GetConnectionEvents)
+			connections.POST("/:id/respond", controllers.RespondToConnection)
+			connections.DELETE("/:id", controllers.RemoveConnection)
+		}
+
 		private.POST("/logout", controllers.Logout)
 	}
 }
@@ -185,8 +208,6 @@ func setupMerchantRoutes(rg *gin.RouterGroup) {
 		{
 			rep.POST("/new", controllers.NewMerchantRep)
 			rep.PUT("/:id", controllers.UpdateMerchantRep)
-			events.POST("/:id/image", controllers.UploadEventImage)
-			events.DELETE("/:id/image", controllers.DeleteEventImageHandler)
 		}
 	}
 }

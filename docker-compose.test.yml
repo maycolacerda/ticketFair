@@ -5,24 +5,27 @@
 services:
 
   # ── TEST DATABASE ─────────────────────────────────
-  # PostgreSQL for testing (simpler than CockroachDB v26 insecure mode)
+  # PostgreSQL for testing with trust auth (no password needed)
   test-db:
     image: postgres:16-alpine
     pull_policy: always
     environment:
       POSTGRES_USER: root
-      POSTGRES_PASSWORD: test_password
-      POSTGRES_DB: ticketfair_test
+      POSTGRES_HOST_AUTH_METHOD: trust
+    command:
+      - postgres
     networks:
       - test-network
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "root", "-d", "ticketfair_test"]
+      test: ["CMD", "pg_isready", "-U", "root"]
       interval: 5s
       timeout: 10s
       retries: 15
       start_period: 10s
     tmpfs:
       - /var/lib/postgresql/data   # in-memory — wiped on restart
+    volumes:
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   # ── TEST RUNNER ───────────────────────────────────
   test-runner:
@@ -37,7 +40,6 @@ services:
       - TEST_DB_HOST=test-db
       - TEST_DB_PORT=5432
       - TEST_DB_USER=root
-      - TEST_DB_PASSWORD=test_password
       - TEST_DB_NAME=ticketfair_test
       - GIN_MODE=test
     depends_on:

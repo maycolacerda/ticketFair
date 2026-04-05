@@ -48,17 +48,17 @@ func InitDB() {
 }
 
 func buildDSN() string {
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
+	host := os.Getenv("COCKROACH_HOST")
+	port := os.Getenv("COCKROACH_PORT")
 	user := os.Getenv("COCKROACH_USER")
-	dbname := os.Getenv("COCKROACH_DB")
+	dbname := os.Getenv("COCKROACH_DATABASE")
 
 	missing := []string{}
 	if host == "" {
-		missing = append(missing, "DB_HOST")
+		missing = append(missing, "COCKROACH_HOST")
 	}
 	if port == "" {
-		missing = append(missing, "DB_PORT")
+		missing = append(missing, "COCKROACH_PORT")
 	}
 	if user == "" {
 		missing = append(missing, "COCKROACH_USER")
